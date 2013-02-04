@@ -1,0 +1,86 @@
+package kom.events;
+
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * User: komelgman
+ * Date: 8/31/12
+ * Time: 1:12 PM
+ */
+
+public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> {
+
+    private final Map<Class<? extends Event>, List<EventListener<Event>>>
+            listenersMap = new ConcurrentHashMap<Class<? extends Event>, List<EventListener<Event>>>();
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <Y extends T> void addEventListener(Class<Y> eventType, EventListener<? super Y> listener) {
+        List<EventListener<Event>> listeners = listenersMap.get(eventType);
+
+        if (listeners == null) {
+            synchronized (listenersMap) {
+                if (!listenersMap.containsKey(eventType)) {
+                    listenersMap.put(eventType, Collections.synchronizedList(new LinkedList<EventListener<Event>>()));
+                }
+            }
+
+            listeners = listenersMap.get(eventType);
+        }
+
+        listeners.add((EventListener<Event>)listener);
+    }
+
+    @Override
+    public void removeEventListener(Class<? extends T> eventType) {
+        synchronized (listenersMap) {
+            listenersMap.remove(eventType);
+        }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <Y extends T> void removeEventListener(Class<Y> eventType, EventListener<? super Y> listener) {
+        List<EventListener<Event>> listeners = listenersMap.get(eventType);
+
+        if (listeners != null) {
+            listeners.remove((EventListener<Event>)listener);
+        }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void dispatchEvent(T event) {
+        // todo: need cache
+        final LinkedList<Class<?>> events = new LinkedList<Class<?>>();
+        events.addFirst(event.getClass());
+
+        while (!events.isEmpty()) {
+            Class<?> eventType = events.removeLast();
+
+            if (eventType != null && Event.class.isAssignableFrom(eventType)) {
+                dispatchEvent((Class<? extends Event>) eventType, event);
+
+                events.addFirst(eventType.getSuperclass());
+
+                for (Class<?> item : eventType.getInterfaces()) {
+                    events.addFirst(item);
+                }
+            }
+        }
+    }
+
+    protected void dispatchEvent(Class<? extends Event> eventType, T event) {
+        List<EventListener<Event>> listeners = listenersMap.get(eventType);
+
+        if (listeners != null) {
+            for (EventListener<Event> listener : listeners) {
+                listener.handle(event);
+            }
+        }
+    }
+}
