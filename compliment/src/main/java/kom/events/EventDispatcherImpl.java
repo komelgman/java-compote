@@ -8,12 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
-/**
- * User: komelgman
- * Date: 8/31/12
- * Time: 1:12 PM
- */
-
 public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> {
 
     private final Map<Class<? extends Event>, List<Callback<Event>>>

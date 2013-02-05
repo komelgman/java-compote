@@ -11,11 +11,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * User: komelgman
- * Date: 9/4/12
- * Time: 11:51 AM
- */
 public class Promise<T> {
     private static final Timer scheduler = new Timer(true);
 

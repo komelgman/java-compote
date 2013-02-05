@@ -5,11 +5,6 @@ import kom.util.Callback;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * User: komelgman
- * Date: 9/4/12
- * Time: 11:50 AM
- */
 public class Deferred<T> {
 
     private final Promise<T> promise;

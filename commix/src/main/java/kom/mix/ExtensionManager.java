@@ -5,12 +5,6 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-/**
- * Created with IntelliJ IDEA.
- * User: syungman
- * Date: 25.06.12
- * Time: 17:37
- */
 public class ExtensionManager<T> implements Extended<T>, Extensible<T> {
 
     protected ConcurrentMap<Class<?>, T> extensions

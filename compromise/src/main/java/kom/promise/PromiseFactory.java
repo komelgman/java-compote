@@ -1,9 +1,5 @@
 package kom.promise;
 
-/**
- * User: syungman
- * Date: 04.02.13
- */
 final class PromiseFactory {
 
     // todo: create object pool

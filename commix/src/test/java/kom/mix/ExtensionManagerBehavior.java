@@ -1,3 +1,5 @@
+package kom.mix;
+
 import kom.mix.Extension;
 import kom.mix.ExtensionManager;
 import org.junit.Before;
@@ -7,13 +9,6 @@ import java.security.InvalidParameterException;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
-
-/**
- * Created with IntelliJ IDEA.
- * User: syungman
- * Date: 07.12.12
- * Time: 15:58
- */
 
 public class ExtensionManagerBehavior {
 

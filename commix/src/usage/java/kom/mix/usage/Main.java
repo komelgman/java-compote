@@ -1,9 +1,5 @@
-/**
- * Created with IntelliJ IDEA.
- * User: syungman
- * Date: 06.12.12
- * Time: 14:49
- */
+package kom.mix.usage;
+
 public class Main {
 
     public static final int WATER = 3;
@@ -18,7 +14,7 @@ public class Main {
 
         switch (terrain) {
             case WATER:
-                // SwimAbility ability = player.getExtension(FlyAbility.class); // -- Incorrect
+                // kom.mix.usage.SwimAbility ability = player.getExtension(kom.mix.usage.FlyAbility.class); // -- Incorrect
                 SwimAbility ability = player.getExtension(SwimAbility.class);
                     if (ability == null) {
                         System.out.println("You shall not pass!");

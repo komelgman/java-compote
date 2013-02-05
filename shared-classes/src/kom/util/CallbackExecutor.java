@@ -3,10 +3,6 @@ package kom.util;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
-/**
- * User: syungman
- * Date: 04.02.13
- */
 public class CallbackExecutor {
 
     private Executor threadPool = null;

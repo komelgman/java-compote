@@ -1,3 +1,5 @@
+package kom.mix.usage;
+
 import kom.mix.Extended;
 import kom.mix.Extension;
 import kom.mix.ExtensionManager;
@@ -16,7 +18,7 @@ public class Player implements Extended<Extension> {
         if (id == 1) {
             extman.registerExtension(SwimAbility.class, new SwimAsADog());
         } else {
-            //extman.registerExtension(FlyAbility.class, new SwimAsATerminator()); // -- Incorrect
+            //extman.registerExtension(kom.mix.usage.FlyAbility.class, new SwimAsATerminator()); // -- Incorrect
             extman.registerExtension(SwimAbility.class, new SwimAsATerminator());
         }
     }
