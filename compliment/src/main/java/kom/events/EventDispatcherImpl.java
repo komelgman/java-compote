@@ -1,10 +1,12 @@
 package kom.events;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import kom.util.Callback;
+import kom.util.CallbackExecutor;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * User: komelgman
@@ -14,41 +16,43 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> {
 
-    private final Map<Class<? extends Event>, List<EventListener<Event>>>
-            listenersMap = new ConcurrentHashMap<Class<? extends Event>, List<EventListener<Event>>>();
+    private final Map<Class<? extends Event>, List<Callback<Event>>>
+            listenersMap = new ConcurrentHashMap<Class<? extends Event>, List<Callback<Event>>>();
+
+    private CallbackExecutor executor = new CallbackExecutor();
+
+    private ThreadPoolExecutor threadPool;
 
     @Override
     @SuppressWarnings("unchecked")
-    public <Y extends T> void addEventListener(Class<Y> eventType, EventListener<? super Y> listener) {
-        List<EventListener<Event>> listeners = listenersMap.get(eventType);
+    public <Y extends T> void addEventListener(Class<Y> eventType, Callback<? super Y> listener) {
+        List<Callback<Event>> listeners = listenersMap.get(eventType);
 
         if (listeners == null) {
             synchronized (listenersMap) {
                 if (!listenersMap.containsKey(eventType)) {
-                    listenersMap.put(eventType, Collections.synchronizedList(new LinkedList<EventListener<Event>>()));
+                    listenersMap.put(eventType, Collections.synchronizedList(new ArrayList<Callback<Event>>()));
                 }
             }
 
             listeners = listenersMap.get(eventType);
         }
 
-        listeners.add((EventListener<Event>)listener);
+        listeners.add((Callback<Event>)listener);
     }
 
     @Override
     public void removeEventListener(Class<? extends T> eventType) {
-        synchronized (listenersMap) {
-            listenersMap.remove(eventType);
-        }
+        listenersMap.remove(eventType);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <Y extends T> void removeEventListener(Class<Y> eventType, EventListener<? super Y> listener) {
-        List<EventListener<Event>> listeners = listenersMap.get(eventType);
+    public <Y extends T> void removeEventListener(Class<Y> eventType, Callback<? super Y> listener) {
+        List<Callback<Event>> listeners = listenersMap.get(eventType);
 
         if (listeners != null) {
-            listeners.remove((EventListener<Event>)listener);
+            listeners.remove((Callback<Event>)listener);
         }
     }
 
@@ -75,12 +79,18 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
     }
 
     protected void dispatchEvent(Class<? extends Event> eventType, T event) {
-        List<EventListener<Event>> listeners = listenersMap.get(eventType);
+        List<Callback<Event>> listeners = listenersMap.get(eventType);
 
-        if (listeners != null) {
-            for (EventListener<Event> listener : listeners) {
-                listener.handle(event);
-            }
+        if (listeners == null) {
+            return;
         }
+
+        for (Callback<Event> listener : listeners) {
+            executor.execute(listener, event);
+        }
+    }
+
+    public void setThreadPool(Executor threadPool) {
+        executor.setThreadPool(threadPool);
     }
 }
