@@ -1,7 +1,5 @@
 package kom.mix;
 
-import kom.mix.Extension;
-import kom.mix.ExtensionManager;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -12,16 +10,16 @@ import static org.junit.Assert.assertThat;
 
 public class ExtensionManagerBehavior {
 
-    ExtensionManager manager;
+    ExtensionManager<Extension> manager;
 
     @Before
     public void before() {
-        manager = new ExtensionManager();
+        manager = new ExtensionManager<Extension>();
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldThrowExceptionWhenExtensionIsNull() throws Exception {
-        final Extension extension = getExtension();
+        final Extension extension = getNullExtension();
         manager.registerExtension(extension);
     }
 
@@ -75,11 +73,7 @@ public class ExtensionManagerBehavior {
         assertThat(manager.hasExtension(Extension.class), is(false));
     }
 
-    public Extension getExtension() {
+    public Extension getNullExtension() {
         return null;
-    }
-
-    private void print(String message) {
-        System.out.println(message);
     }
 }

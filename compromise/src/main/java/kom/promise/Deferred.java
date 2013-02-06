@@ -1,20 +1,34 @@
 package kom.promise;
 
+import kom.promise.events.FailEvent;
+import kom.promise.events.ProgressEvent;
+import kom.promise.events.SuccessEvent;
 import kom.util.Callback;
+import kom.util.SimpleObjectPool;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public class Deferred<T> {
 
+    private static final SimpleObjectPool<Promise> promisePool = new SimpleObjectPool<Promise>(128, Promise.class);
     private final Promise<T> promise;
 
     public Deferred() {
-        this(null);
+        this(promisePool.getObject(), null);
     }
 
-    public Deferred(Callback canceller) {
-        promise = PromiseFactory.getPromise();
+    public Deferred(Promise promise) {
+        this(promise, null);
+    }
+
+    public Deferred(Promise<T> promise, Callback canceller) {
+        if (promise == null) {
+            throw new NullPointerException("Promise can't be null");
+        }
+
+        this.promise = promise;
 
         if (canceller != null) {
             promise.halt(canceller);
@@ -22,22 +36,21 @@ public class Deferred<T> {
     }
 
     public boolean resolve(T data) {
-        return promise.notifyAll(PromiseEventFactory.getSuccessEvent(data), true);
+        return promise.notifyAll(SuccessEvent.class, data, true);
     }
 
     public boolean reject(Object data) {
-        return promise.notifyAll(PromiseEventFactory.getFailEvent(data), true);
+        return promise.notifyAll(FailEvent.class, data, true);
     }
 
     public boolean update(Object data) {
-        return promise.notifyAll(PromiseEventFactory.getProgressEvent(data), false);
+        return promise.notifyAll(ProgressEvent.class, data, false);
     }
 
     public Promise<T> getPromise() {
         return promise;
     }
 
-    @SuppressWarnings("unchecked")
     public static Promise<List<Promise>> parallel(final List<Promise> promises) {
         final AtomicInteger count = new AtomicInteger(promises.size());
         final Deferred<List<Promise>> deferred = new Deferred<List<Promise>>();
@@ -77,7 +90,6 @@ public class Deferred<T> {
     }
 
 
-    @SuppressWarnings("unchecked")
     public static Promise<Promise> earlier(final List<Promise> promises) {
         final Deferred<Promise> deferred = new Deferred<Promise>();
 

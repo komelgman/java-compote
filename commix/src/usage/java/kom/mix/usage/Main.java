@@ -16,12 +16,12 @@ public class Main {
             case WATER:
                 // kom.mix.usage.SwimAbility ability = player.getExtension(kom.mix.usage.FlyAbility.class); // -- Incorrect
                 SwimAbility ability = player.getExtension(SwimAbility.class);
-                    if (ability == null) {
-                        System.out.println("You shall not pass!");
-                        break;
-                    }
+                if (ability == null) {
+                    System.out.println("You shall not pass!");
+                    break;
+                }
 
-                    ability.apply();
+                ability.apply();
                 break;
 
             default:

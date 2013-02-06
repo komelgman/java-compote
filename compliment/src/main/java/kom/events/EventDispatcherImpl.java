@@ -5,17 +5,13 @@ import kom.util.CallbackExecutor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadPoolExecutor;
 
 public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> {
 
     private final Map<Class<? extends Event>, List<Callback<Event>>>
             listenersMap = new ConcurrentHashMap<Class<? extends Event>, List<Callback<Event>>>();
 
-    private CallbackExecutor executor = new CallbackExecutor();
-
-    private ThreadPoolExecutor threadPool;
+    private CallbackExecutor executor;
 
     @Override
     @SuppressWarnings("unchecked")
@@ -79,12 +75,26 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
             return;
         }
 
+        if (executor == null) {
+            manualHandleEvent(event, listeners);
+        } else {
+            handleEventOnExecutor(event, listeners);
+        }
+    }
+
+    private void handleEventOnExecutor(T event, List<Callback<Event>> listeners) {
         for (Callback<Event> listener : listeners) {
             executor.execute(listener, event);
         }
     }
 
-    public void setThreadPool(Executor threadPool) {
-        executor.setThreadPool(threadPool);
+    private void manualHandleEvent(T event, List<Callback<Event>> listeners) {
+        for (Callback<Event> listener : listeners) {
+            listener.handle(event);
+        }
+    }
+
+    public void setCallbackExecutor(CallbackExecutor executor) {
+        this.executor = executor;
     }
 }
