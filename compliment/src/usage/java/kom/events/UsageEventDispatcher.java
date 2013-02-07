@@ -1,8 +1,8 @@
 package kom.events;
 
-import kom.util.callabck.Callback;
-import kom.util.callabck.RunnableCallback;
-import kom.util.callabck.RunnableCallbackExecutor;
+import kom.util.callback.Callback;
+import kom.util.callback.RunnableCallback;
+import kom.util.callback.RunnableCallbackExecutor;
 
 public class UsageEventDispatcher {
 

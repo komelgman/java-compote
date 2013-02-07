@@ -1,7 +1,7 @@
 package kom.events;
 
-import kom.util.callabck.Callback;
-import kom.util.callabck.CallbackExecutor;
+import kom.util.callback.Callback;
+import kom.util.callback.CallbackExecutor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

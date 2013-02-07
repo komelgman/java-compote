@@ -2,8 +2,8 @@ package kom.promise;
 
 import kom.events.EventDispatcherImpl;
 import kom.promise.events.*;
-import kom.util.callabck.Callback;
-import kom.util.callabck.CallbackExecutor;
+import kom.util.callback.Callback;
+import kom.util.callback.CallbackExecutor;
 import kom.util.pool.PoolableObject;
 import kom.util.pool.TypedObjectPool;
 
@@ -14,7 +14,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public class Promise<T> extends PoolableObject {
     private static final Timer scheduler = new Timer(true);
-    private static final TypedObjectPool<PromiseEvent> eventPool = new TypedObjectPool<PromiseEvent>(128);
+    private static final TypedObjectPool<PromiseEvent<Object>> eventPool
+            = new TypedObjectPool<PromiseEvent<Object>>(128);
 
     private final EventDispatcherImpl<PromiseEvent> dispatcher = new EventDispatcherImpl<PromiseEvent>();
     private CallbackExecutor executor = null;
@@ -23,30 +24,30 @@ public class Promise<T> extends PoolableObject {
     private volatile boolean isFinished = false;
     private AtomicBoolean hasTimeout = new AtomicBoolean(false);
 
-    private PromiseEvent reason = null;
+    private PromiseEvent<Object> reason = null;
 
-    public Promise<T> success(Callback<SuccessEvent> callback) {
-        return custom(SuccessEvent.class, callback);
+    public Promise<T> success(Callback<? super SuccessEvent<T>> callback) {
+        return custom(SuccessEvent.class, (Callback<? super SuccessEvent>)callback);
     }
 
-    public Promise<T> fail(Callback<FailEvent> callback) {
+    public Promise<T> fail(Callback<? super FailEvent> callback) {
         return custom(FailEvent.class, callback);
     }
 
-    public Promise<T> progress(Callback<ProgressEvent> callback) {
+    public Promise<T> progress(Callback<? super ProgressEvent> callback) {
         return custom(ProgressEvent.class, callback);
     }
 
-    public Promise<T> halt(Callback<CancelEvent> callback) {
-        return custom(CancelEvent.class, callback);
+    public Promise<T> halt(Callback<? super HaltEvent> callback) {
+        return custom(HaltEvent.class, callback);
     }
 
-    public Promise<T> always(Callback<PromiseEvent> callback) {
+    public Promise<T> always(Callback<? super PromiseEvent> callback) {
         return custom(PromiseEvent.class, callback);
     }
 
     public boolean cancel(Object data) {
-        return notifyAll(CancelEvent.class, data, true);
+        return notifyAll(HaltEvent.class, data, true);
     }
 
     public Promise<T> timeout(int msecs) {
@@ -99,7 +100,7 @@ public class Promise<T> extends PoolableObject {
         return this;
     }
 
-    synchronized <Z, Y extends PromiseEvent<Z>> boolean notifyAll(Class<Y> reasonType, Z data, boolean finish) {
+    synchronized <A extends PromiseEvent<Object>> boolean notifyAll(Class<A> reasonType, Object data, boolean finish) {
         if (isFinished) {
             // warn about notification on finished task
             System.out.println("Promise was notified with reason " + reasonType.getSimpleName());
@@ -122,7 +123,7 @@ public class Promise<T> extends PoolableObject {
         return true;
     }
 
-    private synchronized <Y extends PromiseEvent> Promise<T> custom(Class<Y> reasonType, Callback<Y> callback) {
+    private synchronized <A extends PromiseEvent> Promise<T> custom(Class<A> reasonType, Callback<? super A> callback) {
         if (callback == null) {
             throw new NullPointerException("Callback can't be NULL");
         }

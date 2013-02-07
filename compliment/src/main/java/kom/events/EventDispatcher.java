@@ -1,7 +1,7 @@
 package kom.events;
 
 
-import kom.util.callabck.Callback;
+import kom.util.callback.Callback;
 
 public interface EventDispatcher<T extends Event> {
     public <Y extends T> void addEventListener(Class<Y> eventType, Callback<? super Y> listener);

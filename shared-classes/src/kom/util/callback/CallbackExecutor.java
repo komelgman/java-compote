@@ -1,4 +1,4 @@
-package kom.util.callabck;
+package kom.util.callback;
 
 import java.util.concurrent.Executor;
 

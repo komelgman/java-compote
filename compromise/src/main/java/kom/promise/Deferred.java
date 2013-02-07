@@ -1,13 +1,13 @@
 package kom.promise;
 
 import kom.promise.events.*;
-import kom.util.callabck.Callback;
+import kom.util.callback.Callback;
 import kom.util.pool.SimpleObjectPool;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@SuppressWarnings({"unchecked", "UnusedDeclaration"})
+//@SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public class Deferred<T> {
 
     private static final SimpleObjectPool<Promise> promisePool = new SimpleObjectPool<Promise>(128, Promise.class);
@@ -21,7 +21,7 @@ public class Deferred<T> {
         this(promise, null);
     }
 
-    public Deferred(Promise<T> promise, Callback<CancelEvent> canceller) {
+    public Deferred(Promise<T> promise, Callback<HaltEvent> canceller) {
         if (promise == null) {
             throw new NullPointerException("Promise can't be NULL");
         }
