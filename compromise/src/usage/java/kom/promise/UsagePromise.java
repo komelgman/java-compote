@@ -9,12 +9,13 @@ public class UsagePromise {
         UsagePromise usage = new UsagePromise();
         usage.example1();
         usage.example2();
+        usage.example3();
     }
 
     private void example1() {
-        System.out.println("Example 1: simple example, please wait 3 sec");
+        System.out.println("Example 1: simple example, please wait 5 sec");
 
-        Promise<String> promise = someLongMethod();
+        Promise<String> promise = someLongMethod(5000);
         promise.success(new Callback<SuccessEvent<String>>() {
             @Override
             public void handle(SuccessEvent<String> message) {
@@ -26,7 +27,7 @@ public class UsagePromise {
     private void example2() {
         System.out.println("Example 2: timeout example, please wait 2 sec");
 
-        Promise<String> promise = someLongMethod();
+        Promise<String> promise = someLongMethod(5000);
         promise.success(new Callback<SuccessEvent<String>>() {
             @Override
             public void handle(SuccessEvent<String> message) {
@@ -40,9 +41,21 @@ public class UsagePromise {
         }).timeout(2000);
     }
 
+    private void example3() {
+        System.out.println("Example 3: blocking semantic, please wait 1 sec");
+
+        String result = someLongMethod(1000).progress(new Callback<ProgressEvent>() {
+            @Override
+            public void handle(ProgressEvent message) {
+                System.out.println("Example 3 progress: " + message.getData());
+            }
+        }).await().getResult();
+        System.out.println("Example 3 result: " + result);
+    }
 
 
-    private Promise<String> someLongMethod() {
+
+    private Promise<String> someLongMethod(final int delay) {
         final Deferred<String> deferred = new Deferred<String>();
 
         new Thread() {
@@ -61,7 +74,8 @@ public class UsagePromise {
                 try {
                     // some long job
                     int i = 0;
-                    while (i++ < 300 && !isCancelled) {
+                    while (i++ < delay / 10 && !isCancelled) {
+                        deferred.update(i);
                         sleep(10);
                     }
 

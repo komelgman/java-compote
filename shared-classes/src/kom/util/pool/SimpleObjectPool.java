@@ -17,6 +17,10 @@ public class SimpleObjectPool<T extends Poolable> implements ObjectPool<T> {
         this.maxIndex = maxCapacity - 1;
         this.klass = klass;
         container = new ArrayList<T>(maxCapacity);
+
+        for (int i = 0; i < maxCapacity; ++i) {
+            container.add(i, null);
+        }
     }
 
     public synchronized T getObject() {
@@ -30,7 +34,7 @@ public class SimpleObjectPool<T extends Poolable> implements ObjectPool<T> {
     }
 
     private T extractPoolableObject() {
-        return container.remove(currentIndex--);
+        return container.set(currentIndex--, null);
     }
 
     private T createPoolableObject() {

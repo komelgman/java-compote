@@ -1,5 +1,5 @@
 package kom.promise.events;
 
-public final class ProgressEvent extends PromiseEvent {
+public final class ProgressEvent<T> extends PromiseEvent<T> {
 
 }

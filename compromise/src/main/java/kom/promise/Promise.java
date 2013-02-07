@@ -80,7 +80,11 @@ public class Promise<T> extends PoolableObject {
 
         always(new Callback<PromiseEvent>() {
             @Override
-            public void handle(PromiseEvent data) {
+            public void handle(PromiseEvent event) {
+                if (event.getClass() == ProgressEvent.class) {
+                    return;
+                }
+
                 awaitFlag = false;
 
                 synchronized (awaiter) {
