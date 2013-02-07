@@ -1,10 +1,8 @@
 package kom.promise;
 
-import kom.promise.events.FailEvent;
-import kom.promise.events.ProgressEvent;
-import kom.promise.events.SuccessEvent;
-import kom.util.Callback;
-import kom.util.SimpleObjectPool;
+import kom.promise.events.*;
+import kom.util.callabck.Callback;
+import kom.util.pool.SimpleObjectPool;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,13 +17,13 @@ public class Deferred<T> {
         this(promisePool.getObject(), null);
     }
 
-    public Deferred(Promise promise) {
+    public Deferred(Promise<T> promise) {
         this(promise, null);
     }
 
-    public Deferred(Promise<T> promise, Callback canceller) {
+    public Deferred(Promise<T> promise, Callback<CancelEvent> canceller) {
         if (promise == null) {
-            throw new NullPointerException("Promise can't be null");
+            throw new NullPointerException("Promise can't be NULL");
         }
 
         this.promise = promise;
@@ -54,71 +52,73 @@ public class Deferred<T> {
     public static Promise<List<Promise>> parallel(final List<Promise> promises) {
         final AtomicInteger count = new AtomicInteger(promises.size());
         final Deferred<List<Promise>> deferred = new Deferred<List<Promise>>();
+        final Promise<List<Promise>> result = deferred.getPromise();
 
-        final Callback successCallback = new Callback() {
+        result.fail(new PromiseCanceller(promises, "One of parallel tasks has failed"));
+
+        final Callback<SuccessEvent> successCallback = new Callback<SuccessEvent>() {
             @Override
-            public void handle(Object data) {
+            public void handle(SuccessEvent event) {
                 if (count.decrementAndGet() == 0) {
                     deferred.resolve(promises);
                 }
             }
         };
 
-        // cancel runned tasks if one failed
-        deferred.getPromise().fail(new Callback() {
-            @Override
-            public void handle(Object data) {
-                for (Promise promise : promises) {
-                    if (!promise.isFinished()) { // skip already finished,
-                        // but it still not thread safe and can cancel finished task
-                        promise.cancel(new IllegalStateException("One of parallel tasks has failed"));
-                    }
-                }
-            }
-        });
-
         for (final Promise promise : promises) {
-            promise.success(successCallback).fail(new Callback() {
+            promise.success(successCallback).fail(new Callback<FailEvent>() {
                 @Override
-                public void handle(Object data) {
+                public void handle(FailEvent event) {
                     deferred.reject(promise);
                 }
             });
         }
 
-        return deferred.getPromise();
+        return result;
     }
 
 
     public static Promise<Promise> earlier(final List<Promise> promises) {
         final Deferred<Promise> deferred = new Deferred<Promise>();
+        final Promise<Promise> result = deferred.getPromise();
 
-        deferred.getPromise().always(new Callback() {
-            @Override
-            public void handle(Object data) {
-                for (Promise promise : promises) {
-                    if (!promise.isFinished()) { // skip already finished,
-                        // but it still not thread safe and can cancel finished task
-                        promise.cancel(new IllegalStateException("One of earlier tasks has finished"));
-                    }
-                }
-            }
-        });
+        result.always(new PromiseCanceller(promises, "One of earlier tasks has finished"));
 
         for (final Promise promise : promises) {
-            promise.success(new Callback() {
+            promise.success(new Callback<SuccessEvent>() {
                 @Override
-                public void handle(Object data) {
+                public void handle(SuccessEvent event) {
                     deferred.resolve(promise);
                 }
-            }).fail(new Callback() {
+            }).fail(new Callback<FailEvent>() {
                 @Override
-                public void handle(Object data) {
+                public void handle(FailEvent event) {
                     deferred.reject(promise);
                 }
             });
         }
 
-        return deferred.getPromise();
+        return result;
+    }
+
+
+    private static class PromiseCanceller implements Callback {
+        private final List<Promise> promises;
+        private final String message;
+
+        public PromiseCanceller(List<Promise> promises, String message) {
+            this.promises = promises;
+            this.message = message;
+        }
+
+        @Override
+        public void handle(Object event) {
+            for (Promise promise : promises) {
+                if (!promise.isFinished()) { // skip already finished,
+                    // but it still not thread safe and can cancel finished task
+                    promise.cancel(new IllegalStateException(message));
+                }
+            }
+        }
     }
 }

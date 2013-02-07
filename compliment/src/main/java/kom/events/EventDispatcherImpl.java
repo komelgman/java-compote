@@ -1,11 +1,12 @@
 package kom.events;
 
-import kom.util.Callback;
-import kom.util.CallbackExecutor;
+import kom.util.callabck.Callback;
+import kom.util.callabck.CallbackExecutor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("unchecked")
 public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> {
 
     private final Map<Class<? extends Event>, List<Callback<Event>>>
@@ -14,18 +15,18 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
     private CallbackExecutor executor;
 
     @Override
-    @SuppressWarnings("unchecked")
     public <Y extends T> void addEventListener(Class<Y> eventType, Callback<? super Y> listener) {
         List<Callback<Event>> listeners = listenersMap.get(eventType);
 
         if (listeners == null) {
             synchronized (listenersMap) {
-                if (!listenersMap.containsKey(eventType)) {
-                    listenersMap.put(eventType, Collections.synchronizedList(new ArrayList<Callback<Event>>()));
+                if (listenersMap.containsKey(eventType)) {
+                    listeners = listenersMap.get(eventType);
+                } else {
+                    listeners = Collections.synchronizedList(new ArrayList<Callback<Event>>());
+                    listenersMap.put(eventType, listeners);
                 }
             }
-
-            listeners = listenersMap.get(eventType);
         }
 
         listeners.add((Callback<Event>)listener);
@@ -37,7 +38,12 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    public void removeEventListeners() {
+        listenersMap.clear();
+    }
+
+    @Override
+    @SuppressWarnings("RedundantCast")
     public <Y extends T> void removeEventListener(Class<Y> eventType, Callback<? super Y> listener) {
         List<Callback<Event>> listeners = listenersMap.get(eventType);
 
@@ -47,7 +53,6 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void dispatchEvent(T event) {
         // todo: need cache
         final LinkedList<Class<?>> events = new LinkedList<Class<?>>();

@@ -1,4 +1,4 @@
-package kom.util;
+package kom.util.pool;
 
 /**
  * User: syungman
@@ -16,6 +16,7 @@ public class PoolableObject implements Poolable {
 
     @Override
     public void release() {
-        owner.returnObject(this);
+        if (owner != null)
+            owner.returnObject(this);
     }
 }

@@ -2,7 +2,10 @@ package kom.promise;
 
 import kom.events.EventDispatcherImpl;
 import kom.promise.events.*;
-import kom.util.*;
+import kom.util.callabck.Callback;
+import kom.util.callabck.CallbackExecutor;
+import kom.util.pool.PoolableObject;
+import kom.util.pool.TypedObjectPool;
 
 import java.util.*;
 import java.util.concurrent.TimeoutException;
@@ -17,28 +20,28 @@ public class Promise<T> extends PoolableObject {
     private CallbackExecutor executor = null;
 
     private volatile boolean awaitFlag = true;
+    private volatile boolean isFinished = false;
     private AtomicBoolean hasTimeout = new AtomicBoolean(false);
-    private boolean isFinished = false;
 
     private PromiseEvent reason = null;
 
-    public Promise<T> success(Callback<T> callback) {
+    public Promise<T> success(Callback<SuccessEvent> callback) {
         return custom(SuccessEvent.class, callback);
     }
 
-    public Promise<T> fail(Callback callback) {
+    public Promise<T> fail(Callback<FailEvent> callback) {
         return custom(FailEvent.class, callback);
     }
 
-    public Promise<T> progress(Callback<T> callback) {
+    public Promise<T> progress(Callback<ProgressEvent> callback) {
         return custom(ProgressEvent.class, callback);
     }
 
-    public Promise<T> halt(Callback callback) {
+    public Promise<T> halt(Callback<CancelEvent> callback) {
         return custom(CancelEvent.class, callback);
     }
 
-    public Promise<T> always(Callback callback) {
+    public Promise<T> always(Callback<PromiseEvent> callback) {
         return custom(PromiseEvent.class, callback);
     }
 
@@ -59,9 +62,9 @@ public class Promise<T> extends PoolableObject {
             }
         };
 
-        always(new Callback<Object>() {
+        always(new Callback<PromiseEvent>() {
             @Override
-            public void handle(Object data) {
+            public void handle(PromiseEvent event) {
                 task.cancel();
             }
         });
@@ -74,9 +77,9 @@ public class Promise<T> extends PoolableObject {
     public synchronized Promise<T> await() {
         final Object awaiter = this;
 
-        always(new Callback<Object>() {
+        always(new Callback<PromiseEvent>() {
             @Override
-            public void handle(Object data) {
+            public void handle(PromiseEvent data) {
                 awaitFlag = false;
 
                 synchronized (awaiter) {
@@ -96,10 +99,10 @@ public class Promise<T> extends PoolableObject {
         return this;
     }
 
-    synchronized boolean notifyAll(Class<? extends PromiseEvent> event, Object data, boolean finish) {
+    synchronized <Z, Y extends PromiseEvent<Z>> boolean notifyAll(Class<Y> reasonType, Z data, boolean finish) {
         if (isFinished) {
             // warn about notification on finished task
-            System.out.println("Promise was notified with reason " + event.getSimpleName());
+            System.out.println("Promise was notified with reason " + reasonType.getSimpleName());
             System.out.println("But this promise has already been stopped by reason "
                     + this.reason.getClass().getSimpleName());
             return false;
@@ -111,7 +114,7 @@ public class Promise<T> extends PoolableObject {
             reason.release();
         }
 
-        reason = eventPool.getObject(event);
+        reason = eventPool.getObject(reasonType);
         reason.setData(data);
 
         dispatcher.dispatchEvent(reason);
@@ -119,14 +122,14 @@ public class Promise<T> extends PoolableObject {
         return true;
     }
 
-    private synchronized Promise<T> custom(Class<? extends PromiseEvent> reasonType, Callback callback) {
+    private synchronized <Y extends PromiseEvent> Promise<T> custom(Class<Y> reasonType, Callback<Y> callback) {
         if (callback == null) {
             throw new NullPointerException("Callback can't be NULL");
         }
 
         if (isFinished) {
-            if ((reasonType == PromiseEvent.class) || (this.reason.getClass() == reasonType)) {
-                executor.execute(callback, reason);
+            if ((reasonType == PromiseEvent.class) || (reason.getClass() == reasonType)) {
+                execute((Callback<PromiseEvent>)callback);
             }
         } else {
             dispatcher.addEventListener(reasonType, callback);
@@ -135,18 +138,32 @@ public class Promise<T> extends PoolableObject {
         return this;
     }
 
+    private void execute(Callback<PromiseEvent> callback) {
+        if (executor == null) {
+            callback.handle(reason);
+        } else {
+            executor.execute(callback, reason);
+        }
+    }
+
     @Override
     public void release() {
-        if (reason != null) {
-            reason.release();
-        }
+        reset();
 
         super.release();
     }
 
-    /*
-     * GETTERS/SETTERS
-     */
+    public void reset() {
+        if (reason != null) {
+            reason.release();
+        }
+
+        dispatcher.setCallbackExecutor(null);
+        executor = null;
+        awaitFlag = true;
+        hasTimeout.set(false);
+        isFinished = false;
+    }
 
     public void setCallbackExecutor(CallbackExecutor executor) {
         this.executor = executor;
@@ -159,7 +176,7 @@ public class Promise<T> extends PoolableObject {
 
     public T getResult() {
         if (reason instanceof SuccessEvent) {
-            return (T)reason.getData();
+            return ((SuccessEvent<T>)reason).getData();
         }
 
         throw new IllegalStateException("Result can be retrieved only if promise was successfully completed");

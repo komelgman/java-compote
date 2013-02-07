@@ -1,16 +1,16 @@
 package kom.promise.events;
 
 import kom.events.Event;
-import kom.util.PoolableObject;
+import kom.util.pool.PoolableObject;
 
-public class PromiseEvent extends PoolableObject implements Event {
-    private Object data;
+public class PromiseEvent<T> extends PoolableObject implements Event {
+    private T data;
 
-    public void setData(Object data) {
+    public void setData(T data) {
         this.data = data;
     }
 
-    public Object getData() {
+    public T getData() {
         return data;
     }
 

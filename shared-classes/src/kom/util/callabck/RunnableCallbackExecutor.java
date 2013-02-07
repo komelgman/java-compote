@@ -1,14 +1,14 @@
-package kom.util;
+package kom.util.callabck;
 
 import java.util.concurrent.Executor;
 
-public class DefaultCallbackExecutor implements CallbackExecutor {
+public class RunnableCallbackExecutor implements CallbackExecutor {
     private volatile Executor executor = null;
 
-    public DefaultCallbackExecutor() {
+    public RunnableCallbackExecutor() {
     }
 
-    public DefaultCallbackExecutor(Executor executor) {
+    public RunnableCallbackExecutor(Executor executor) {
         this.executor = executor;
     }
 
@@ -35,6 +35,6 @@ public class DefaultCallbackExecutor implements CallbackExecutor {
     }
 
     public static class SingletonHolder {
-        public static final CallbackExecutor HOLDER_INSTANCE = new DefaultCallbackExecutor();
+        public static final CallbackExecutor HOLDER_INSTANCE = new RunnableCallbackExecutor();
     }
 }

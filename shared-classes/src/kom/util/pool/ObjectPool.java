@@ -1,4 +1,4 @@
-package kom.util;
+package kom.util.pool;
 
 /**
  * User: syungman

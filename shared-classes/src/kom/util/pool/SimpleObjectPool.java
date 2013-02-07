@@ -1,4 +1,4 @@
-package kom.util;
+package kom.util.pool;
 
 import java.util.ArrayList;
 
@@ -20,9 +20,13 @@ public class SimpleObjectPool<T extends Poolable> implements ObjectPool<T> {
     }
 
     public synchronized T getObject() {
-        return currentIndex < 0
+        T result = currentIndex < 0
                 ? createPoolableObject()
                 : extractPoolableObject();
+
+        result.setOwnerPool(this);
+
+        return result;
     }
 
     private T extractPoolableObject() {
@@ -31,9 +35,7 @@ public class SimpleObjectPool<T extends Poolable> implements ObjectPool<T> {
 
     private T createPoolableObject() {
         try {
-            T result = klass.newInstance();
-            result.setOwnerPool(this);
-            return result;
+            return klass.newInstance();
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -43,7 +45,7 @@ public class SimpleObjectPool<T extends Poolable> implements ObjectPool<T> {
     public synchronized void returnObject(T object) {
         if (currentIndex < maxIndex) {
             container.set(++currentIndex, object);
-            object.setOwnerPool(this);
+            object.setOwnerPool(null);
         }
     }
 }
