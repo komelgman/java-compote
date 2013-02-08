@@ -7,13 +7,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings({"unchecked", "SuspiciousMethodCalls"})
 public class KeyedObjectPoolImpl<T extends Poolable> implements KeyedObjectPool<T> {
     private final int maxCapacity;
-    private final Map<Class<?extends T>, SimpleObjectPoolImpl<?>> map;
+    private final Map<Class<? extends T>, SimpleObjectPoolImpl> map;
 
     private int size = 0;
 
     public KeyedObjectPoolImpl(int maxCapacity) {
         this.maxCapacity = maxCapacity;
-        this.map = new ConcurrentHashMap<Class<? extends T>, SimpleObjectPoolImpl<?>>();
+        this.map = new ConcurrentHashMap<Class<? extends T>, SimpleObjectPoolImpl>();
     }
 
     public synchronized <Y extends T> Y getObject(Class<Y> klass) {
