@@ -5,20 +5,15 @@ import kom.promise.events.*;
 import kom.util.callback.Callback;
 import kom.util.callback.CallbackExecutor;
 import kom.util.pool.PoolableObject;
-import kom.util.pool.TypedObjectPool;
 
-import java.util.*;
+import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public class Promise<T> extends PoolableObject {
-    private static final Timer scheduler = new Timer(true);
-    private static final TypedObjectPool<PromiseEvent<Object>> eventPool
-            = new TypedObjectPool<PromiseEvent<Object>>(128);
-
     private final EventDispatcherImpl<PromiseEvent> dispatcher = new EventDispatcherImpl<PromiseEvent>();
-    private CallbackExecutor executor = null;
+    private PromiseEnvironment environment;
 
     private volatile boolean awaitFlag = true;
     private volatile boolean isFinished = false;
@@ -70,7 +65,7 @@ public class Promise<T> extends PoolableObject {
             }
         });
 
-        scheduler.schedule(task, msecs);
+        env().getScheduler().schedule(task, msecs);
 
         return this;
     }
@@ -119,7 +114,7 @@ public class Promise<T> extends PoolableObject {
             reason.release();
         }
 
-        reason = eventPool.getObject(reasonType);
+        reason = env().getEventPool().getObject(reasonType);
         reason.setData(data);
 
         dispatcher.dispatchEvent(reason);
@@ -144,6 +139,8 @@ public class Promise<T> extends PoolableObject {
     }
 
     private void execute(Callback<PromiseEvent> callback) {
+        final CallbackExecutor executor = env().getCallbackExecutor();
+
         if (executor == null) {
             callback.handle(reason);
         } else {
@@ -164,15 +161,15 @@ public class Promise<T> extends PoolableObject {
         }
 
         dispatcher.setCallbackExecutor(null);
-        executor = null;
+        environment = null;
         awaitFlag = true;
         hasTimeout.set(false);
         isFinished = false;
     }
 
-    public void setCallbackExecutor(CallbackExecutor executor) {
-        this.executor = executor;
-        dispatcher.setCallbackExecutor(executor);
+    public void setEnvironment(PromiseEnvironment environment) {
+        this.environment = environment;
+        dispatcher.setCallbackExecutor(environment.getCallbackExecutor());
     }
 
     public PromiseEvent getReason() {
@@ -189,5 +186,13 @@ public class Promise<T> extends PoolableObject {
 
     public boolean isFinished() {
         return isFinished;
+    }
+
+    private PromiseEnvironment env() {
+        if (environment == null) {
+            environment = PromiseEnvironment.getDefaultEnvironment();
+        }
+
+        return environment;
     }
 }

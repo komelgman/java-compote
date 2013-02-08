@@ -5,28 +5,26 @@ import java.util.concurrent.ConcurrentHashMap;
 
 
 @SuppressWarnings({"unchecked", "SuspiciousMethodCalls"})
-public class TypedObjectPool<T extends Poolable> implements ObjectPool<T> {
-
-
+public class KeyedObjectPoolImpl<T extends Poolable> implements KeyedObjectPool<T> {
     private final int maxCapacity;
-    private final Map<Class<?extends T>, SimpleObjectPool<?>> map;
+    private final Map<Class<?extends T>, SimpleObjectPoolImpl<?>> map;
 
     private int size = 0;
 
-    public TypedObjectPool(int maxCapacity) {
+    public KeyedObjectPoolImpl(int maxCapacity) {
         this.maxCapacity = maxCapacity;
-        this.map = new ConcurrentHashMap<Class<? extends T>, SimpleObjectPool<?>>();
+        this.map = new ConcurrentHashMap<Class<? extends T>, SimpleObjectPoolImpl<?>>();
     }
 
     public <Y extends T> Y getObject(Class<Y> klass) {
-        SimpleObjectPool<Y> pool = (SimpleObjectPool<Y>)map.get(klass);
+        SimpleObjectPoolImpl<Y> pool = (SimpleObjectPoolImpl<Y>)map.get(klass);
 
         if (pool == null) {
             synchronized (map) {
                 if (map.containsKey(klass)) {
-                    pool = (SimpleObjectPool<Y>)map.get(klass);
+                    pool = (SimpleObjectPoolImpl<Y>)map.get(klass);
                 } else {
-                    pool = new SimpleObjectPool<Y>(maxCapacity, klass);
+                    pool = new SimpleObjectPoolImpl<Y>(maxCapacity, klass);
                     map.put(klass, pool);
                 }
             }
@@ -42,7 +40,7 @@ public class TypedObjectPool<T extends Poolable> implements ObjectPool<T> {
     @Override
     public void returnObject(T object) {
         if (size < maxCapacity) {
-            final SimpleObjectPool pool = map.get(object.getClass());
+            final SimpleObjectPoolImpl pool = map.get(object.getClass());
             if (pool == null) {
                 throw new IllegalStateException("ObjectPool for this object class was not initialized");
             }

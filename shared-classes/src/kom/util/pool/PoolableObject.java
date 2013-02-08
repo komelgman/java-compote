@@ -1,9 +1,5 @@
 package kom.util.pool;
 
-/**
- * User: syungman
- * Date: 06.02.13
- */
 @SuppressWarnings("unchecked")
 public class PoolableObject implements Poolable {
 
