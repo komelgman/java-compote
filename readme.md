@@ -1,10 +1,10 @@
 Java Compote library
 ====================
 
-This library source contains implementations for these patterns:
-- Event/EventDispatcher see (compliment module)[tree/master/compliment];
-- Extensible see (commix module)[tree/master/commix];
-- Deferred/Promise see (compromise module)[tree/master/compromise].
+This library contains implementations for these patterns:
+- Event/EventDispatcher see [compliment module](tree/master/compliment);
+- Extensible see [commix module](tree/master/commix);
+- Deferred/Promise see [compromise module](tree/master/compromise).
 
 The shared-classes directory contains:
 - callback - base classes for callbacks functionality;
