@@ -16,7 +16,7 @@ public class KeyedObjectPoolImpl<T extends Poolable> implements KeyedObjectPool<
         this.map = new ConcurrentHashMap<Class<? extends T>, SimpleObjectPoolImpl<?>>();
     }
 
-    public <Y extends T> Y getObject(Class<Y> klass) {
+    public synchronized <Y extends T> Y getObject(Class<Y> klass) {
         SimpleObjectPoolImpl<Y> pool = (SimpleObjectPoolImpl<Y>)map.get(klass);
 
         if (pool == null) {
@@ -38,7 +38,7 @@ public class KeyedObjectPoolImpl<T extends Poolable> implements KeyedObjectPool<
     }
 
     @Override
-    public void returnObject(T object) {
+    public synchronized void returnObject(T object) {
         if (size < maxCapacity) {
             final SimpleObjectPoolImpl pool = map.get(object.getClass());
             if (pool == null) {
