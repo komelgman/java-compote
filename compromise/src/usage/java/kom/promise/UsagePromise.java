@@ -10,10 +10,11 @@ public class UsagePromise {
         usage.example1();
         usage.example2();
         usage.example3();
+        usage.example4();
     }
 
     private void example1() {
-        System.out.println("Example 1: simple example, please wait 5 sec");
+        System.out.println("Example 1: simple example, please wait 3 sec");
 
         Promise<String> promise = someLongMethod(5000);
         promise.onSuccess(new Callback<SuccessEvent<String>>() {
@@ -42,16 +43,24 @@ public class UsagePromise {
     }
 
     private void example3() {
-        System.out.println("Example 3: blocking semantic, please wait 1 sec");
+        System.out.println("Example 3: blocking semantic, please wait 10 sec");
+
+        String result = someLongMethod(10000).await().getResult();
+        System.out.println("Example 3 result: " + result);
+    }
+
+    private void example4() {
+        System.out.println("Example 4: update state, please wait 1 sec");
 
         String result = someLongMethod(1000).onUpdate(new Callback<UpdateEvent>() {
             @Override
             public void handle(UpdateEvent message) {
-                System.out.println("Example 3 progress: " + message.getData());
+                System.out.println("Example 4 progress: " + message.getData());
             }
         }).await().getResult();
-        System.out.println("Example 3 result: " + result);
+        System.out.println("Example 4 result: " + result);
     }
+
 
 
 
