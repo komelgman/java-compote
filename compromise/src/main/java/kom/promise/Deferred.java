@@ -6,6 +6,8 @@ import kom.util.callback.Callback;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.Arrays.asList;
+
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public class Deferred<T> {
 
@@ -15,7 +17,7 @@ public class Deferred<T> {
         this(null, null);
     }
 
-    public Deferred(PromiseEnvironment environment, Callback<HaltEvent> canceller) {
+    public Deferred(PromiseEnvironment environment, Callback<AbortEvent> canceller) {
         if (environment == null) {
             environment = PromiseEnvironment.getDefaultEnvironment();
         }
@@ -23,8 +25,12 @@ public class Deferred<T> {
         this.promise = environment.getPromisePool().getObject();
 
         if (canceller != null) {
-            promise.halt(canceller);
+            promise.onAbort(canceller);
         }
+    }
+
+    public Deferred(PromiseEnvironment environment) {
+        this(environment, null);
     }
 
     public boolean resolve(T data) {
@@ -36,23 +42,36 @@ public class Deferred<T> {
     }
 
     public boolean update(Object data) {
-        return promise.notifyAll(ProgressEvent.class, data, false);
+        return promise.notifyAll(UpdateEvent.class, data, false);
     }
 
     public Promise<T> getPromise() {
         return promise;
     }
 
+    public static Promise<List<Promise>> parallel(Promise ... promises) {
+        return parallel(null, asList(promises));
+    }
+
     public static Promise<List<Promise>> parallel(final List<Promise> promises) {
+        return parallel(null, promises);
+    }
+
+    public static Promise<List<Promise>> parallel(PromiseEnvironment environment, Promise ... promises) {
+        return parallel(environment, asList(promises));
+    }
+
+    public static Promise<List<Promise>> parallel(PromiseEnvironment environment, final List<Promise> promises) {
         final AtomicInteger count = new AtomicInteger(promises.size());
-        final Deferred<List<Promise>> deferred = new Deferred<List<Promise>>();
+        final Deferred<List<Promise>> deferred = new Deferred<List<Promise>>(environment);
         final Promise<List<Promise>> result = deferred.getPromise();
 
-        result.fail(new PromiseCanceller(promises, "One of parallel tasks has failed"));
+        result.onFail(new PromiseCanceller(promises, "One of parallel tasks has failed"))
+                .onAbort(new PromiseCanceller(promises, "Parallel tasks was cancelled"));
 
-        final Callback<SuccessEvent> successCallback = new Callback<SuccessEvent>() {
+        final Callback<PromiseEvent> successCallback = new Callback<PromiseEvent>() {
             @Override
-            public void handle(SuccessEvent event) {
+            public void handle(PromiseEvent event) {
                 if (count.decrementAndGet() == 0) {
                     deferred.resolve(promises);
                 }
@@ -60,36 +79,56 @@ public class Deferred<T> {
         };
 
         for (final Promise promise : promises) {
-            promise.success(successCallback).fail(new Callback<FailEvent>() {
-                @Override
-                public void handle(FailEvent event) {
-                    deferred.reject(promise);
-                }
-            });
+            promise.onSuccess(successCallback)
+                    .onAbort(successCallback)
+                    .onFail(new Callback<FailEvent>() {
+                        @Override
+                        public void handle(FailEvent event) {
+                            deferred.reject(promise);
+                        }
+                    });
         }
 
         return result;
     }
 
+    public static Promise<Promise> earlier(Promise ... promises) {
+        return earlier(null, asList(promises));
+    }
 
     public static Promise<Promise> earlier(final List<Promise> promises) {
-        final Deferred<Promise> deferred = new Deferred<Promise>();
+        return earlier(null, promises);
+    }
+
+    public static Promise<Promise> earlier(PromiseEnvironment environment, Promise ... promises) {
+        return earlier(environment, asList(promises));
+    }
+
+    public static Promise<Promise> earlier(PromiseEnvironment environment, final List<Promise> promises) {
+        final Deferred<Promise> deferred = new Deferred<Promise>(environment);
         final Promise<Promise> result = deferred.getPromise();
 
-        result.always(new PromiseCanceller(promises, "One of earlier tasks has finished"));
+        result.onAny(new PromiseCanceller(promises, "One of earlier tasks has finished"));
 
         for (final Promise promise : promises) {
-            promise.success(new Callback<SuccessEvent>() {
+            promise.onSuccess(new Callback<SuccessEvent>() {
                 @Override
                 public void handle(SuccessEvent event) {
                     deferred.resolve(promise);
                 }
-            }).fail(new Callback<FailEvent>() {
-                @Override
-                public void handle(FailEvent event) {
-                    deferred.reject(promise);
-                }
-            });
+            })
+                    .onFail(new Callback<FailEvent>() {
+                        @Override
+                        public void handle(FailEvent event) {
+                            deferred.reject(promise);
+                        }
+                    })
+                    .onAbort(new Callback<AbortEvent>() {
+                        @Override
+                        public void handle(AbortEvent event) {
+                            result.abort(promise);
+                        }
+                    });
         }
 
         return result;
@@ -109,8 +148,8 @@ public class Deferred<T> {
         public void handle(Object event) {
             for (Promise promise : promises) {
                 if (!promise.isFinished()) { // skip already finished,
-                    // but it still not thread safe and can cancel finished task
-                    promise.cancel(new IllegalStateException(message));
+                    // but it still not thread safe and can try stopping finished task
+                    promise.abort(new IllegalStateException(message));
                 }
             }
         }

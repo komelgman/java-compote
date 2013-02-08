@@ -21,28 +21,28 @@ public class Promise<T> extends PoolableObject {
 
     private PromiseEvent<Object> reason = null;
 
-    public Promise<T> success(Callback<? super SuccessEvent<T>> callback) {
+    public Promise<T> onSuccess(Callback<? super SuccessEvent<T>> callback) {
         return custom(SuccessEvent.class, (Callback<? super SuccessEvent>)callback);
     }
 
-    public Promise<T> fail(Callback<? super FailEvent> callback) {
+    public Promise<T> onFail(Callback<? super FailEvent> callback) {
         return custom(FailEvent.class, callback);
     }
 
-    public Promise<T> progress(Callback<? super ProgressEvent> callback) {
-        return custom(ProgressEvent.class, callback);
+    public Promise<T> onUpdate(Callback<? super UpdateEvent> callback) {
+        return custom(UpdateEvent.class, callback);
     }
 
-    public Promise<T> halt(Callback<? super HaltEvent> callback) {
-        return custom(HaltEvent.class, callback);
+    public Promise<T> onAbort(Callback<? super AbortEvent> callback) {
+        return custom(AbortEvent.class, callback);
     }
 
-    public Promise<T> always(Callback<? super PromiseEvent> callback) {
+    public Promise<T> onAny(Callback<? super PromiseEvent> callback) {
         return custom(PromiseEvent.class, callback);
     }
 
-    public boolean cancel(Object data) {
-        return notifyAll(HaltEvent.class, data, true);
+    public boolean abort(Object data) {
+        return notifyAll(AbortEvent.class, data, true);
     }
 
     public Promise<T> timeout(int msecs) {
@@ -54,11 +54,11 @@ public class Promise<T> extends PoolableObject {
         final TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                promise.cancel(new TimeoutException("Promise was cancelled by timeout"));
+                promise.abort(new TimeoutException("Promise was cancelled by timeout"));
             }
         };
 
-        always(new Callback<PromiseEvent>() {
+        onAny(new Callback<PromiseEvent>() {
             @Override
             public void handle(PromiseEvent event) {
                 task.cancel();
@@ -73,10 +73,10 @@ public class Promise<T> extends PoolableObject {
     public synchronized Promise<T> await() {
         final Object awaiter = this;
 
-        always(new Callback<PromiseEvent>() {
+        onAny(new Callback<PromiseEvent>() {
             @Override
             public void handle(PromiseEvent event) {
-                if (event.getClass() == ProgressEvent.class) {
+                if (event.getClass() == UpdateEvent.class) {
                     return;
                 }
 

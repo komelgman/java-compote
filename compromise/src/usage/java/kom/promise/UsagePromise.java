@@ -16,7 +16,7 @@ public class UsagePromise {
         System.out.println("Example 1: simple example, please wait 5 sec");
 
         Promise<String> promise = someLongMethod(5000);
-        promise.success(new Callback<SuccessEvent<String>>() {
+        promise.onSuccess(new Callback<SuccessEvent<String>>() {
             @Override
             public void handle(SuccessEvent<String> message) {
                 System.out.println("Example 1: " + message.getData());
@@ -28,15 +28,15 @@ public class UsagePromise {
         System.out.println("Example 2: timeout example, please wait 2 sec");
 
         Promise<String> promise = someLongMethod(5000);
-        promise.success(new Callback<SuccessEvent<String>>() {
+        promise.onSuccess(new Callback<SuccessEvent<String>>() {
             @Override
             public void handle(SuccessEvent<String> message) {
                 System.out.println("Example 2 success: " + message.getData());
             }
-        }).halt(new Callback<HaltEvent>() {
+        }).onAbort(new Callback<AbortEvent>() {
             @Override
-            public void handle(HaltEvent message) {
-                System.out.println("Example 2 halt: " + message.getData().toString());
+            public void handle(AbortEvent message) {
+                System.out.println("Example 2 onAbort: " + message.getData().toString());
             }
         }).timeout(2000);
     }
@@ -44,9 +44,9 @@ public class UsagePromise {
     private void example3() {
         System.out.println("Example 3: blocking semantic, please wait 1 sec");
 
-        String result = someLongMethod(1000).progress(new Callback<ProgressEvent>() {
+        String result = someLongMethod(1000).onUpdate(new Callback<UpdateEvent>() {
             @Override
-            public void handle(ProgressEvent message) {
+            public void handle(UpdateEvent message) {
                 System.out.println("Example 3 progress: " + message.getData());
             }
         }).await().getResult();
@@ -64,9 +64,9 @@ public class UsagePromise {
             @Override
             public void run() {
                 // job stopper
-                deferred.getPromise().halt(new Callback<HaltEvent>() {
+                deferred.getPromise().onAbort(new Callback<AbortEvent>() {
                     @Override
-                    public void handle(HaltEvent message) {
+                    public void handle(AbortEvent message) {
                         isCancelled = true;
                     }
                 });
