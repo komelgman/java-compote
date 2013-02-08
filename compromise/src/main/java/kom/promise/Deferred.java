@@ -22,7 +22,8 @@ public class Deferred<T> {
             environment = PromiseEnvironment.getDefaultEnvironment();
         }
 
-        this.promise = environment.getPromisePool().getObject();
+        promise = environment.getPromisePool().getObject();
+        promise.setEnvironment(environment);
 
         if (canceller != null) {
             promise.onAbort(canceller);
