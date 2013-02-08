@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("unchecked")
 public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> {
+    private static final Map<Class<? extends Event>, List<Class<? extends Event>>> eventsCache
+            = new ConcurrentHashMap<Class<? extends Event>, List<Class<? extends Event>>>();
 
     private final Map<Class<? extends Event>, List<Callback<Event>>>
             listenersMap = new ConcurrentHashMap<Class<? extends Event>, List<Callback<Event>>>();
@@ -38,11 +40,6 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
     }
 
     @Override
-    public void removeEventListeners() {
-        listenersMap.clear();
-    }
-
-    @Override
     @SuppressWarnings("RedundantCast")
     public <Y extends T> void removeEventListener(Class<Y> eventType, Callback<? super Y> listener) {
         List<Callback<Event>> listeners = listenersMap.get(eventType);
@@ -53,17 +50,45 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
     }
 
     @Override
+    public void removeEventListeners() {
+        listenersMap.clear();
+    }
+
+    @Override
     public void dispatchEvent(T event) {
-        // todo: need cache
+        final Class<? extends Event> rootEventType = event.getClass();
+        List<Class<? extends Event>> eventTypesList = eventsCache.get(rootEventType);
+
+        if (eventTypesList == null) {
+            synchronized (eventsCache) {
+                if (eventsCache.containsKey(rootEventType)) {
+                    eventTypesList = eventsCache.get(rootEventType);
+                } else {
+                    eventTypesList = getEvents(rootEventType);
+                    eventsCache.put(rootEventType, eventTypesList);
+                }
+            }
+        }
+
+        for (Class<? extends Event> eventType : eventTypesList) {
+            dispatchEvent(eventType, event);
+        }
+    }
+
+    private List<Class<? extends Event>> getEvents(Class<? extends Event> fromEventType) {
+        final ArrayList<Class<? extends Event>> result = new ArrayList<Class<? extends Event>>();
         final LinkedList<Class<?>> events = new LinkedList<Class<?>>();
-        events.addFirst(event.getClass());
+        events.addFirst(fromEventType);
 
         while (!events.isEmpty()) {
-            Class<?> eventType = events.removeLast();
+            final Class<?> eventType = events.removeLast();
 
             if (eventType != null && Event.class.isAssignableFrom(eventType)) {
-                dispatchEvent((Class<? extends Event>) eventType, event);
+                if (result.contains((Class<? extends Event>)eventType)) {
+                    continue;
+                }
 
+                result.add((Class<? extends Event>) eventType);
                 events.addFirst(eventType.getSuperclass());
 
                 for (Class<?> item : eventType.getInterfaces()) {
@@ -71,6 +96,8 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
                 }
             }
         }
+
+        return result;
     }
 
     protected void dispatchEvent(Class<? extends Event> eventType, T event) {
