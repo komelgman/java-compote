@@ -3,13 +3,12 @@ Compliment
 
 Simple event model realisation
 
-License
--------
+Dependency
+----------
+This module depends on shared-classes
 
 Example
 -------
 ```Java
 // todo: example
 ```
-
-Up to: [java-util](..)  / [root](../..)
