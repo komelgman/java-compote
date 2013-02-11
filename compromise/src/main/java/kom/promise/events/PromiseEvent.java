@@ -1,9 +1,8 @@
 package kom.promise.events;
 
 import kom.events.Event;
-import kom.util.pool.PoolableObject;
 
-public class PromiseEvent<T> extends PoolableObject implements Event {
+public class PromiseEvent<T> implements Event {
     private T data;
 
     public void setData(T data) {
@@ -12,11 +11,5 @@ public class PromiseEvent<T> extends PoolableObject implements Event {
 
     public T getData() {
         return data;
-    }
-
-    @Override
-    public void release() {
-        data = null;
-        super.release();
     }
 }
