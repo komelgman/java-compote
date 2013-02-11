@@ -137,7 +137,15 @@ public class Promise<T> {
         }
     }
 
-    public void setEnvironment(PromiseEnvironment environment) {
+    protected synchronized PromiseEnvironment getEnvironment() {
+        if (environment == null) {
+            setEnvironment(PromiseEnvironment.getDefaultEnvironment());
+        }
+
+        return environment;
+    }
+
+    public synchronized void setEnvironment(PromiseEnvironment environment) {
         this.environment = environment;
         dispatcher.setCallbackExecutor(environment.getCallbackExecutor());
     }
@@ -156,14 +164,6 @@ public class Promise<T> {
 
     public boolean isFinished() {
         return isFinished;
-    }
-
-    protected PromiseEnvironment getEnvironment() {
-        if (environment == null) {
-            environment = PromiseEnvironment.getDefaultEnvironment();
-        }
-
-        return environment;
     }
 
     public void reset() {

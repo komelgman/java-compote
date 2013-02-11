@@ -7,30 +7,14 @@ import kom.util.callback.Callback;
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public class Deferred<T> {
 
-    private final Promise<T> promise;
+    private Promise<T> promise;
 
     public Deferred() {
-        this((PromiseEnvironment)null, null);
-    }
-
-    public Deferred(PromiseEnvironment environment) {
-        this(environment, null);
+        this(PromiseEnvironment.getDefaultEnvironment().getPromise(), null);
     }
 
     public Deferred(Promise promise) {
         this(promise, null);
-    }
-
-    public Deferred(PromiseEnvironment environment, Callback<AbortEvent> canceller) {
-        if (environment == null) {
-            environment = PromiseEnvironment.getDefaultEnvironment();
-        }
-
-        promise = environment.getPromise();
-
-        if (canceller != null) {
-            promise.onAbort(canceller);
-        }
     }
 
     public Deferred(Promise promise, Callback<AbortEvent> canceller) {

@@ -62,8 +62,6 @@ public class UsagePromise {
     }
 
 
-
-
     private Promise<String> someLongMethod(final int delay) {
         final Deferred<String> deferred = new Deferred<String>();
 
