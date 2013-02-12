@@ -14,14 +14,18 @@ public class RunnableCallbackExecutor implements CallbackExecutor {
 
     @Override
     public <T> void execute(Callback<T> callback, T data) {
-        callback.handle(data);
+        try {
+            callback.handle(data);
 
-        if (callback instanceof Runnable) {
-            if (executor != null) {
-                executor.execute((Runnable)callback);
-            } else {
-                ((Runnable) callback).run();
+            if (callback instanceof Runnable) {
+                if (executor != null) {
+                    executor.execute((Runnable)callback);
+                } else {
+                    ((Runnable) callback).run();
+                }
             }
+        } catch (Exception e) {
+            // warning
         }
     }
 

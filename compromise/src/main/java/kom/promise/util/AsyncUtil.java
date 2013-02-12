@@ -22,7 +22,7 @@ public final class AsyncUtil {
         return chain(null, asList(tasks));
     }
 
-    public static Promise<List<AsyncTask>> chain(final List<AsyncTask> tasks) {
+    public static Promise<List<AsyncTask>> chain(List<AsyncTask> tasks) {
         return chain(null, tasks);
     }
 
@@ -31,6 +31,10 @@ public final class AsyncUtil {
     }
 
     public static Promise<List<AsyncTask>> chain(PromiseEnvironment environment, final List<AsyncTask> tasks) {
+        if (environment == null) {
+            environment = PromiseEnvironment.getDefaultEnvironment();
+        }
+
         final Promise<List<AsyncTask>> result = environment.getPromise();
         final Deferred<List<AsyncTask>> deferred = new Deferred<List<AsyncTask>>(result);
 
@@ -50,12 +54,14 @@ public final class AsyncUtil {
 
                 for (final AsyncTask task : tasks) {
                     currentTask.set(task);
-                    task.onFail(new Callback<FailEvent>() {
-                        @Override
-                        public void handle(FailEvent message) {
-                            deferred.reject(task);
-                        }
-                    }).await();
+
+                    task.start().await();
+
+                    Class reason = task.getReason().getClass();
+                    if (reason.equals(FailEvent.class) || reason.equals(AbortEvent.class)) {
+                        deferred.reject(task);
+                        return;
+                    }
 
                     if (isCancelled.get()) {
                         return;
@@ -75,7 +81,7 @@ public final class AsyncUtil {
         return parallel(null, asList(promises));
     }
 
-    public static Promise<List<Promise>> parallel(final List<Promise> promises) {
+    public static Promise<List<Promise>> parallel(List<Promise> promises) {
         return parallel(null, promises);
     }
 
@@ -84,25 +90,35 @@ public final class AsyncUtil {
     }
 
     public static Promise<List<Promise>> parallel(PromiseEnvironment environment, final List<Promise> promises) {
+        if (environment == null) {
+            environment = PromiseEnvironment.getDefaultEnvironment();
+        }
+
         final AtomicInteger count = new AtomicInteger(promises.size());
         final Promise<List<Promise>> result = environment.getPromise();
         final Deferred<List<Promise>> deferred = new Deferred<List<Promise>>(result);
 
-        result.onFail(new PromiseCanceller(promises, "One of parallel tasks has failed"))
-                .onAbort(new PromiseCanceller(promises, "Parallel tasks was cancelled"));
-
-        final Callback<PromiseEvent> successCallback = new Callback<PromiseEvent>() {
-            @Override
-            public void handle(PromiseEvent event) {
-                if (count.decrementAndGet() == 0) {
-                    deferred.resolve(promises);
-                }
-            }
-        };
+        result.onFail(new PromiseCanceller(promises, "One of parallel tasks was failed"))
+              .onAbort(new PromiseCanceller(promises, "One of parallel tasks (or main parallel task) was cancelled"));
 
         for (final Promise promise : promises) {
-            promise.onSuccess(successCallback)
-                    .onAbort(successCallback)
+            promise.onSuccess(new Callback<PromiseEvent>() {
+                        @Override
+                        public void handle(PromiseEvent event) {
+                            if (count.decrementAndGet() == 0) {
+                                deferred.resolve(promises);
+                            } else {
+                                deferred.update(promise);
+                            }
+                        }
+                    })
+                    .onAbort(new Callback<AbortEvent>() {
+                        @Override
+                        public void handle(AbortEvent message) {
+                            if (!result.isFinished())
+                                result.abort(promise);
+                        }
+                    })
                     .onFail(new Callback<FailEvent>() {
                         @Override
                         public void handle(FailEvent event) {
@@ -118,7 +134,7 @@ public final class AsyncUtil {
         return earlier(null, asList(promises));
     }
 
-    public static Promise<Promise> earlier(final List<Promise> promises) {
+    public static Promise<Promise> earlier(List<Promise> promises) {
         return earlier(null, promises);
     }
 
@@ -127,18 +143,28 @@ public final class AsyncUtil {
     }
 
     public static Promise<Promise> earlier(PromiseEnvironment environment, final List<Promise> promises) {
+        if (environment == null) {
+            environment = PromiseEnvironment.getDefaultEnvironment();
+        }
+
         final Promise<Promise> result = environment.getPromise();
         final Deferred<Promise> deferred = new Deferred<Promise>(result);
 
-        result.onAny(new PromiseCanceller(promises, "One of earlier tasks has finished"));
+        PromiseCanceller doneCanceller = new PromiseCanceller(promises, "One of earlier tasks was finished");
+        PromiseCanceller abortCanceller = new PromiseCanceller(promises,
+                "One of earlier tasks (or main earlier promise) was cancelled");
+
+        result.onFail(doneCanceller)
+              .onSuccess(doneCanceller)
+              .onAbort(abortCanceller);
 
         for (final Promise promise : promises) {
             promise.onSuccess(new Callback<SuccessEvent>() {
-                @Override
-                public void handle(SuccessEvent event) {
-                    deferred.resolve(promise);
-                }
-            })
+                        @Override
+                        public void handle(SuccessEvent event) {
+                            deferred.resolve(promise);
+                        }
+                    })
                     .onFail(new Callback<FailEvent>() {
                         @Override
                         public void handle(FailEvent event) {
@@ -148,7 +174,8 @@ public final class AsyncUtil {
                     .onAbort(new Callback<AbortEvent>() {
                         @Override
                         public void handle(AbortEvent event) {
-                            result.abort(promise);
+                            if (!result.isFinished())
+                                result.abort(promise);
                         }
                     });
         }

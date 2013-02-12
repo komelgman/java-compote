@@ -19,6 +19,7 @@ public class Promise<T> {
 
     private PromiseEvent<Object> reason = null;
     private PromiseEnvironment environment;
+    private Object tag = null;
 
     public Promise<T> onSuccess(Callback<? super SuccessEvent<T>> callback) {
         return custom(SuccessEvent.class, (Callback<? super SuccessEvent>)callback);
@@ -49,17 +50,21 @@ public class Promise<T> {
             throw new IllegalStateException("Promise has already been timeout");
         }
 
-        final Promise<T> promise = this;
         final TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                promise.abort(new TimeoutException("Promise was cancelled by timeout"));
+                Promise.this.abort(new TimeoutException("Promise was cancelled by timeout"));
             }
         };
 
         onAny(new Callback<PromiseEvent>() {
             @Override
             public void handle(PromiseEvent event) {
+                if (event.getClass() == UpdateEvent.class) {
+                    return;
+                }
+
+
                 task.cancel();
             }
         });
@@ -104,6 +109,7 @@ public class Promise<T> {
             System.out.println("Promise was notified with reason " + reasonType.getSimpleName());
             System.out.println("But this promise has already been stopped by reason "
                     + this.reason.getClass().getSimpleName());
+
             return false;
         }
 
@@ -166,11 +172,21 @@ public class Promise<T> {
         return isFinished;
     }
 
+    public Object getTag() {
+        return tag;
+    }
+
+    public Promise<T> setTag(Object value) {
+        tag = value;
+        return this;
+    }
+
     public void reset() {
         awaitFlag = true;
         hasTimeout.set(false);
         isFinished = false;
         reason = null;
+        tag = null;
 
         dispatcher.setCallbackExecutor(null);
         dispatcher.removeEventListeners();

@@ -122,7 +122,15 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
 
     private void manualHandleEvent(T event, List<Callback<Event>> listeners) {
         for (Callback<Event> listener : listeners) {
+            executeCallback(event, listener);
+        }
+    }
+
+    private void executeCallback(T event, Callback<Event> listener) {
+        try {
             listener.handle(event);
+        } catch (Exception e) {
+            // warning
         }
     }
 
