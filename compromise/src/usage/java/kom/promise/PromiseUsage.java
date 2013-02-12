@@ -3,10 +3,10 @@ package kom.promise;
 import kom.promise.events.*;
 import kom.util.callback.Callback;
 
-public class UsagePromise {
+public class PromiseUsage {
 
     public static void main(String[] args) {
-        UsagePromise usage = new UsagePromise();
+        PromiseUsage usage = new PromiseUsage();
         usage.example1();
         usage.example2();
         usage.example3();

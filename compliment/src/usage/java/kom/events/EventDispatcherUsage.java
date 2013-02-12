@@ -4,12 +4,12 @@ import kom.util.callback.Callback;
 import kom.util.callback.RunnableCallback;
 import kom.util.callback.RunnableCallbackExecutor;
 
-public class UsageEventDispatcher {
+public class EventDispatcherUsage {
 
     EventDispatcher<UBaseEvent> dispatcher;
 
     public static void main(String[] args) {
-        UsageEventDispatcher usage = new UsageEventDispatcher();
+        EventDispatcherUsage usage = new EventDispatcherUsage();
         usage.init();
         usage.example1();
         usage.example2();

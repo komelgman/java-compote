@@ -8,12 +8,12 @@ import kom.util.callback.Callback;
  * User: syungman
  * Date: 11.02.13
  */
-public class UsageAsyncTask {
+public class AsyncTaskUsage {
 
     public static void main(String[] args) {
         System.out.println("Program not closed immediately because used cached thread pool");
 
-        UsageAsyncTask usage = new UsageAsyncTask();
+        AsyncTaskUsage usage = new AsyncTaskUsage();
         usage.example1();
     }
 
