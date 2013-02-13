@@ -7,7 +7,7 @@ import kom.util.callback.Callback;
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public class Deferred<T> {
 
-    private Promise<T> promise;
+    private final Promise<T> promise;
 
     public Deferred() {
         this(PromiseEnvironment.getDefaultEnvironment().getPromise(), null);
@@ -30,15 +30,15 @@ public class Deferred<T> {
     }
 
     public boolean resolve(T data) {
-        return promise.notifyAll(SuccessEvent.class, data, true);
+        return promise.signalAboutCompletion(SuccessEvent.class, data);
     }
 
     public boolean reject(Object data) {
-        return promise.notifyAll(FailEvent.class, data, true);
+        return promise.signalAboutCompletion(FailEvent.class, data);
     }
 
     public boolean update(Object data) {
-        return promise.notifyAll(UpdateEvent.class, data, false);
+        return promise.signalAboutProgress(UpdateEvent.class, data);
     }
 
     public Promise<T> getPromise() {

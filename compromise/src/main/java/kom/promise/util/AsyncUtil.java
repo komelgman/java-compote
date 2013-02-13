@@ -57,7 +57,7 @@ public final class AsyncUtil {
 
                     task.start().await();
 
-                    Class reason = task.getReason().getClass();
+                    Class reason = task.getReasonOfTaskCompletion().getClass();
                     if (reason.equals(FailEvent.class) || reason.equals(AbortEvent.class)) {
                         deferred.reject(task);
                         return;
@@ -115,7 +115,7 @@ public final class AsyncUtil {
                     .onAbort(new Callback<AbortEvent>() {
                         @Override
                         public void handle(AbortEvent message) {
-                            if (!result.isFinished())
+                            if (!result.isCompleted())
                                 result.abort(promise);
                         }
                     })
@@ -174,7 +174,7 @@ public final class AsyncUtil {
                     .onAbort(new Callback<AbortEvent>() {
                         @Override
                         public void handle(AbortEvent event) {
-                            if (!result.isFinished())
+                            if (!result.isCompleted())
                                 result.abort(promise);
                         }
                     });
@@ -196,7 +196,7 @@ public final class AsyncUtil {
         @Override
         public void handle(Object event) {
             for (Promise promise : promises) {
-                if (!promise.isFinished()) { // skip already finished,
+                if (!promise.isCompleted()) { // skip already finished,
                     // but it still not thread safe and can try stopping finished task
                     promise.abort(new IllegalStateException(message));
                 }

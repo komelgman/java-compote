@@ -1,8 +1,12 @@
 package kom.util.callback;
 
 import java.util.concurrent.Executor;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class RunnableCallbackExecutor implements CallbackExecutor {
+    private static final Logger log = Logger.getLogger(RunnableCallbackExecutor.class.getName());
+
     private volatile Executor executor = null;
 
     public RunnableCallbackExecutor() {
@@ -25,7 +29,7 @@ public class RunnableCallbackExecutor implements CallbackExecutor {
                 }
             }
         } catch (Exception e) {
-            // warning
+            log.log(Level.WARNING, e.getMessage(), e);
         }
     }
 

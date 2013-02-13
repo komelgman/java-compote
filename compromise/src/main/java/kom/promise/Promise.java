@@ -8,48 +8,60 @@ import kom.util.callback.Callback;
 import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public class Promise<T> {
+    private static final Logger log = Logger.getLogger(Promise.class.getName());
+
     private final EventDispatcherImpl<PromiseEvent> dispatcher = new EventDispatcherImpl<PromiseEvent>();
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition awaiter = lock.newCondition();
 
-    private volatile boolean awaitFlag = true;
-    private volatile boolean isFinished = false;
-    private AtomicBoolean hasTimeout = new AtomicBoolean(false);
+    private final AtomicReference<TimerTask> timerTask = new AtomicReference<TimerTask>(null);
+    private final AtomicReference<PromiseEnvironment> environment = new AtomicReference<PromiseEnvironment>(null);
 
-    private PromiseEvent<Object> reason = null;
-    private PromiseEnvironment environment;
-    private Object tag = null;
+    private AtomicBoolean isComplete = new AtomicBoolean(false);
+    private volatile PromiseEvent<Object> reasonOfTaskCompletion = null;
+    private volatile Object tag = null;
+
+
+
+    public Promise() {
+        setEnvironment(null);
+    }
 
     public Promise<T> onSuccess(Callback<? super SuccessEvent<T>> callback) {
-        return custom(SuccessEvent.class, (Callback<? super SuccessEvent>)callback);
+        return attachCallback(SuccessEvent.class, (Callback<? super SuccessEvent>) callback);
     }
 
     public Promise<T> onFail(Callback<? super FailEvent> callback) {
-        return custom(FailEvent.class, callback);
+        return attachCallback(FailEvent.class, callback);
     }
 
     public Promise<T> onUpdate(Callback<? super UpdateEvent> callback) {
-        return custom(UpdateEvent.class, callback);
+        return attachCallback(UpdateEvent.class, callback);
     }
 
     public Promise<T> onAbort(Callback<? super AbortEvent> callback) {
-        return custom(AbortEvent.class, callback);
+        return attachCallback(AbortEvent.class, callback);
     }
 
     public Promise<T> onAny(Callback<? super PromiseEvent> callback) {
-        return custom(PromiseEvent.class, callback);
+        return attachCallback(PromiseEvent.class, callback);
     }
 
     public boolean abort(Object data) {
-        return notifyAll(AbortEvent.class, data, true);
+        return signalAboutCompletion(AbortEvent.class, data);
     }
 
-    public Promise<T> timeout(int msecs) {
-        if (hasTimeout.getAndSet(true)) {
-            throw new IllegalStateException("Promise has already been timeout");
-        }
 
+
+    public Promise<T> timeout(int msecs) {
         final TimerTask task = new TimerTask() {
             @Override
             public void run() {
@@ -57,6 +69,10 @@ public class Promise<T> {
             }
         };
 
+        if (!timerTask.compareAndSet(null, task)) {
+            throw new IllegalStateException("Promise has already been timeout");
+        }
+
         onAny(new Callback<PromiseEvent>() {
             @Override
             public void handle(PromiseEvent event) {
@@ -64,58 +80,41 @@ public class Promise<T> {
                     return;
                 }
 
-
-                task.cancel();
+                timerTask.get().cancel();
             }
         });
 
-        getEnvironment().getScheduler().schedule(task, msecs);
+        getEnvironment().getScheduler().schedule(timerTask.get(), msecs);
 
         return this;
     }
 
-    public synchronized Promise<T> await() {
-        final Object awaiter = this;
-
-        onAny(new Callback<PromiseEvent>() {
-            @Override
-            public void handle(PromiseEvent event) {
-                if (event.getClass() == UpdateEvent.class) {
-                    return;
-                }
-
-                awaitFlag = false;
-
-                synchronized (awaiter) {
-                    awaiter.notify();
-                }
-            }
-        });
-
-        while (awaitFlag) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                // nothing
-            }
+    public Promise<T> await() {
+        if (!isComplete.get()) {
+            waitForTaskToBeCompleted();
         }
 
         return this;
     }
 
-    synchronized <A extends PromiseEvent<Object>> boolean notifyAll(Class<A> reasonType, Object data, boolean finish) {
-        if (isFinished) {
-            // warn about notification on finished task
-            System.out.println("Promise was notified with reason " + reasonType.getSimpleName());
-            System.out.println("But this promise has already been stopped by reason "
-                    + this.reason.getClass().getSimpleName());
+    private void waitForTaskToBeCompleted() {
+        lock.lock();
+        try {
+            while (!isComplete.get()) {
+                awaiter.awaitUninterruptibly();
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
 
+    <A extends PromiseEvent<Object>> boolean signalAboutProgress(Class<A> reasonType, Object data) {
+        if (isComplete.get()) {
+            warningAboutCompletedTask(reasonType);
             return false;
         }
 
-        isFinished = finish;
-
-        reason = getEnvironment().getEvent(reasonType);
+        final PromiseEvent reason = getEnvironment().getEvent(reasonType);
         reason.setData(data);
 
         dispatcher.dispatchEvent(reason);
@@ -123,13 +122,44 @@ public class Promise<T> {
         return true;
     }
 
-    private synchronized <A extends PromiseEvent> Promise<T> custom(Class<A> reasonType, Callback<? super A> callback) {
+    <A extends PromiseEvent<Object>> boolean signalAboutCompletion(Class<A> reasonType, Object data) {
+        if (!isComplete.compareAndSet(false, true)) {
+            warningAboutCompletedTask(reasonType);
+            return false;
+        }
+
+        reasonOfTaskCompletion = getEnvironment().getEvent(reasonType);
+        reasonOfTaskCompletion.setData(data);
+
+        dispatcher.dispatchEvent(reasonOfTaskCompletion);
+
+        notifyAboutTaskCompleted();
+
+        return true;
+    }
+
+    private <A extends PromiseEvent<Object>> void warningAboutCompletedTask(Class<A> reasonType) {
+        log.log(Level.WARNING, "Promise was notified with reason " + reasonType.getSimpleName() + "\n"
+                + "But this promise has already been stopped by reason "
+                + this.reasonOfTaskCompletion.getClass().getSimpleName());
+    }
+
+    private void notifyAboutTaskCompleted() {
+        lock.lock();
+        try {
+            awaiter.signalAll();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private <A extends PromiseEvent> Promise<T> attachCallback(Class<A> reasonType, Callback<? super A> callback) {
         if (callback == null) {
             throw new NullPointerException("Callback can't be NULL");
         }
 
-        if (isFinished) {
-            execute(reasonType, (Callback<PromiseEvent>) callback);
+        if (isComplete.get()) {
+            executeCallback(reasonType, (Callback<PromiseEvent>) callback);
         } else {
             dispatcher.addEventListener(reasonType, callback);
         }
@@ -137,43 +167,52 @@ public class Promise<T> {
         return this;
     }
 
-    private <A extends PromiseEvent> void execute(Class<A> reasonType, Callback<PromiseEvent> callback) {
-        if ((reasonType == PromiseEvent.class) || (reason.getClass() == reasonType)) {
-            getEnvironment().executeCallback(callback, reason);
+    private <A extends PromiseEvent> void executeCallback(Class<A> reasonType, Callback<PromiseEvent> callback) {
+        if ((reasonType == PromiseEvent.class) || (reasonOfTaskCompletion.getClass() == reasonType)) {
+            getEnvironment().executeCallback(callback, reasonOfTaskCompletion);
         }
     }
 
-    protected synchronized PromiseEnvironment getEnvironment() {
-        if (environment == null) {
-            setEnvironment(PromiseEnvironment.getDefaultEnvironment());
+    public void setEnvironment(PromiseEnvironment value) {
+        if (value == null) {
+            this.environment.set(PromiseEnvironment.getDefaultEnvironment());
+        } else {
+            this.environment.set(value);
         }
 
-        return environment;
+        dispatcher.setCallbackExecutor(environment.get().getCallbackExecutor());
     }
 
-    public synchronized void setEnvironment(PromiseEnvironment environment) {
-        this.environment = environment;
-        dispatcher.setCallbackExecutor(environment.getCallbackExecutor());
+    protected PromiseEnvironment getEnvironment() {
+        return environment.get();
     }
 
-    public PromiseEvent getReason() {
-        return reason;
+    public PromiseEvent getReasonOfTaskCompletion() {
+        return reasonOfTaskCompletion;
     }
 
-    public T getResult() {
-        if (reason instanceof SuccessEvent) {
-            return ((SuccessEvent<T>)reason).getData();
+    public T getSuccessResult() {
+        if (reasonOfTaskCompletion instanceof SuccessEvent) {
+            return ((SuccessEvent<T>) reasonOfTaskCompletion).getData();
         }
 
         throw new IllegalStateException("Result can be retrieved only if promise was successfully completed");
     }
 
-    public boolean isFinished() {
-        return isFinished;
+    public boolean isCompleted() {
+        return isComplete.get();
     }
 
-    public Object getTag() {
-        return tag;
+    public boolean isAborted() {
+        return isComplete.get() && reasonOfTaskCompletion.getClass() == AbortEvent.class;
+    }
+
+    public boolean isSuccessed() {
+        return isComplete.get() && reasonOfTaskCompletion.getClass() == SuccessEvent.class;
+    }
+
+    public boolean isFailed() {
+        return isComplete.get() && reasonOfTaskCompletion.getClass() == FailEvent.class;
     }
 
     public Promise<T> setTag(Object value) {
@@ -181,15 +220,34 @@ public class Promise<T> {
         return this;
     }
 
-    public void reset() {
-        awaitFlag = true;
-        hasTimeout.set(false);
-        isFinished = false;
-        reason = null;
-        tag = null;
+    public Object getTag() {
+        return tag;
+    }
 
-        dispatcher.setCallbackExecutor(null);
-        dispatcher.removeEventListeners();
-        environment = null;
+    /**
+     * You can use this method for reset and reuse promise,
+     * without creating new instance
+     *
+     * Warning: This method not thread safe,
+     * you must be sure that the Promise instance is no longer used.
+     *
+     * @param instance - Promise whose state is reset
+     */
+    public static void reset(Promise instance) {
+        if (!instance.isComplete.compareAndSet(true, false)) {
+            throw new IllegalStateException("Can't reset not finished task");
+        }
+
+        final TimerTask timerTask = (TimerTask)instance.timerTask.getAndSet(null);
+        if (timerTask != null) {
+            timerTask.cancel();
+        }
+
+        instance.reasonOfTaskCompletion = null;
+        instance.tag = null;
+
+        instance.dispatcher.removeEventListeners();
+        instance.dispatcher.setCallbackExecutor(null);
+        instance.environment.set(null);
     }
 }

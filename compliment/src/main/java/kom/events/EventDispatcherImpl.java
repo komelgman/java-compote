@@ -5,9 +5,13 @@ import kom.util.callback.CallbackExecutor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @SuppressWarnings("unchecked")
 public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> {
+    private static final Logger log = Logger.getLogger(EventDispatcherImpl.class.getName());
+
     private static final Map<Class<? extends Event>, List<Class<? extends Event>>> eventsCache
             = new ConcurrentHashMap<Class<? extends Event>, List<Class<? extends Event>>>();
 
@@ -130,7 +134,7 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
         try {
             listener.handle(event);
         } catch (Exception e) {
-            // warning
+            log.log(Level.WARNING, e.getMessage(), e);
         }
     }
 
