@@ -40,7 +40,7 @@ public final class AsyncUtil {
 
         environment.executeRunnable(new Runnable() {
             private AtomicBoolean isCancelled = new AtomicBoolean(false);
-            private AtomicReference<AsyncTask> currentTask;
+            private AtomicReference<AsyncTask> currentTask = new AtomicReference<AsyncTask>();
 
             @Override
             public void run() {
