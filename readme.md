@@ -7,8 +7,7 @@ This library contains implementations for these patterns:
 - Deferred/Promise see [compromise module](compromise).
 
 The shared-classes directory contains:
-- callback - base classes for callbacks functionality;
-- pool - base classes for object pooling functionality.
+- callback - base classes for callbacks functionality.
 
 License
 -------
