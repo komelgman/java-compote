@@ -34,8 +34,8 @@ public class RunnableCallbackExecutor implements CallbackExecutor {
     }
 
     @Override
-    public void setThreadExecutor(Executor threadExecutor) {
-        this.executor = threadExecutor;
+    public void setRunnableExecutor(Executor runnableExecutor) {
+        this.executor = runnableExecutor;
     }
 
     public static CallbackExecutor getInstance() {

@@ -183,7 +183,6 @@ public final class AsyncUtil {
         return result;
     }
 
-
     private static class PromiseCanceller implements Callback {
         private final List<Promise> promises;
         private final String message;
