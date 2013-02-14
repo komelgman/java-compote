@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Sergey Yungman (aka komelgman)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kom.mix;
 
 import org.junit.Before;
@@ -25,7 +41,8 @@ public class ExtensionManagerBehavior {
 
     @Test(expected = NullPointerException.class)
     public void shouldThrowExceptionWhenKeyIsNull() throws Exception {
-        final Extension extension = new Extension() {};
+        final Extension extension = new Extension() {
+        };
         manager.registerExtension(null, extension);
     }
 
@@ -37,7 +54,8 @@ public class ExtensionManagerBehavior {
 
     @Test(expected = InvalidParameterException.class)
     public void shouldThrowExceptionWhenExtensionAlreadyRegistered() throws Exception {
-        final Extension extension = new Extension() {};
+        final Extension extension = new Extension() {
+        };
 
         manager.registerExtension(extension);
         manager.registerExtension(extension);
@@ -45,7 +63,8 @@ public class ExtensionManagerBehavior {
 
     @Test
     public void registeredExtensionShouldBeExists() throws Exception {
-        final Extension extension = new Extension() {};
+        final Extension extension = new Extension() {
+        };
 
         // register extension by his class
         assertThat(manager.hasExtension(extension.getClass()), is(false));
@@ -60,7 +79,8 @@ public class ExtensionManagerBehavior {
 
     @Test
     public void unregisteredExtensionShouldBeNotExists() throws Exception {
-        final Extension extension = new Extension() {};
+        final Extension extension = new Extension() {
+        };
 
         // register extension by his class
         manager.registerExtension(extension);

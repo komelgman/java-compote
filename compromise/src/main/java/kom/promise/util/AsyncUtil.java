@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Sergey Yungman (aka komelgman)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kom.promise.util;
 
 import kom.promise.Deferred;
@@ -18,7 +34,7 @@ import static java.util.Arrays.asList;
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public final class AsyncUtil {
 
-    public static Promise<List<AsyncTask>> chain(AsyncTask ... tasks) {
+    public static Promise<List<AsyncTask>> chain(AsyncTask... tasks) {
         return chain(null, asList(tasks));
     }
 
@@ -26,7 +42,7 @@ public final class AsyncUtil {
         return chain(null, tasks);
     }
 
-    public static Promise<List<AsyncTask>> chain(PromiseEnvironment environment, AsyncTask ... tasks) {
+    public static Promise<List<AsyncTask>> chain(PromiseEnvironment environment, AsyncTask... tasks) {
         return chain(environment, asList(tasks));
     }
 
@@ -77,7 +93,7 @@ public final class AsyncUtil {
         return result;
     }
 
-    public static Promise<List<Promise>> parallel(Promise ... promises) {
+    public static Promise<List<Promise>> parallel(Promise... promises) {
         return parallel(null, asList(promises));
     }
 
@@ -85,7 +101,7 @@ public final class AsyncUtil {
         return parallel(null, promises);
     }
 
-    public static Promise<List<Promise>> parallel(PromiseEnvironment environment, Promise ... promises) {
+    public static Promise<List<Promise>> parallel(PromiseEnvironment environment, Promise... promises) {
         return parallel(environment, asList(promises));
     }
 
@@ -99,19 +115,19 @@ public final class AsyncUtil {
         final Deferred<List<Promise>> deferred = new Deferred<List<Promise>>(result);
 
         result.onFail(new PromiseCanceller(promises, "One of parallel tasks was failed"))
-              .onAbort(new PromiseCanceller(promises, "One of parallel tasks (or main parallel task) was cancelled"));
+                .onAbort(new PromiseCanceller(promises, "One of parallel tasks (or main parallel task) was cancelled"));
 
         for (final Promise promise : promises) {
             promise.onSuccess(new Callback<PromiseEvent>() {
-                        @Override
-                        public void handle(PromiseEvent event) {
-                            if (count.decrementAndGet() == 0) {
-                                deferred.resolve(promises);
-                            } else {
-                                deferred.update(promise);
-                            }
-                        }
-                    })
+                @Override
+                public void handle(PromiseEvent event) {
+                    if (count.decrementAndGet() == 0) {
+                        deferred.resolve(promises);
+                    } else {
+                        deferred.update(promise);
+                    }
+                }
+            })
                     .onAbort(new Callback<AbortEvent>() {
                         @Override
                         public void handle(AbortEvent message) {
@@ -130,7 +146,7 @@ public final class AsyncUtil {
         return result;
     }
 
-    public static Promise<Promise> earlier(Promise ... promises) {
+    public static Promise<Promise> earlier(Promise... promises) {
         return earlier(null, asList(promises));
     }
 
@@ -138,7 +154,7 @@ public final class AsyncUtil {
         return earlier(null, promises);
     }
 
-    public static Promise<Promise> earlier(PromiseEnvironment environment, Promise ... promises) {
+    public static Promise<Promise> earlier(PromiseEnvironment environment, Promise... promises) {
         return earlier(environment, asList(promises));
     }
 
@@ -155,16 +171,16 @@ public final class AsyncUtil {
                 "One of earlier tasks (or main earlier promise) was cancelled");
 
         result.onFail(doneCanceller)
-              .onSuccess(doneCanceller)
-              .onAbort(abortCanceller);
+                .onSuccess(doneCanceller)
+                .onAbort(abortCanceller);
 
         for (final Promise promise : promises) {
             promise.onSuccess(new Callback<SuccessEvent>() {
-                        @Override
-                        public void handle(SuccessEvent event) {
-                            deferred.resolve(promise);
-                        }
-                    })
+                @Override
+                public void handle(SuccessEvent event) {
+                    deferred.resolve(promise);
+                }
+            })
                     .onFail(new Callback<FailEvent>() {
                         @Override
                         public void handle(FailEvent event) {

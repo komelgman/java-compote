@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Sergey Yungman (aka komelgman)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kom.promise;
 
 import kom.events.EventDispatcherImpl;
@@ -30,7 +46,6 @@ public class Promise<T> {
     private volatile Object tag = null;
 
 
-
     public Promise() {
         setEnvironment(null);
     }
@@ -58,7 +73,6 @@ public class Promise<T> {
     public boolean abort(Object data) {
         return signalAboutCompletion(AbortEvent.class, data);
     }
-
 
 
     public Promise<T> timeout(int msecs) {
@@ -227,7 +241,7 @@ public class Promise<T> {
     /**
      * You can use this method for reset and reuse promise,
      * without creating new instance
-     *
+     * <p/>
      * Warning: This method not thread safe,
      * you must be sure that the Promise instance is no longer used.
      *
@@ -238,7 +252,7 @@ public class Promise<T> {
             throw new IllegalStateException("Can't reset not finished task");
         }
 
-        final TimerTask timerTask = (TimerTask)instance.timerTask.getAndSet(null);
+        final TimerTask timerTask = (TimerTask) instance.timerTask.getAndSet(null);
         if (timerTask != null) {
             timerTask.cancel();
         }

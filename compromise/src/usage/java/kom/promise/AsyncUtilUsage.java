@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Sergey Yungman (aka komelgman)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kom.promise;
 
 import kom.promise.events.AbortEvent;
@@ -7,7 +23,8 @@ import kom.util.callback.Callback;
 
 import java.util.List;
 
-import static kom.promise.util.AsyncUtil.*;
+import static kom.promise.util.AsyncUtil.earlier;
+import static kom.promise.util.AsyncUtil.parallel;
 
 public class AsyncUtilUsage {
 
@@ -24,9 +41,9 @@ public class AsyncUtilUsage {
         System.out.println("Example 1: Parallel task execution");
 
         parallel(
-            someLongOperation(4000).setTag("Example 1/Operation 1"),
-            someLongOperation(2500).setTag("Example 1/Operation 2"),
-            someLongOperation(3200).setTag("Example 1/Operation 3")
+                someLongOperation(4000).setTag("Example 1/Operation 1"),
+                someLongOperation(2500).setTag("Example 1/Operation 2"),
+                someLongOperation(3200).setTag("Example 1/Operation 3")
         ).onSuccess(new Callback<SuccessEvent<List<Promise>>>() {
             @Override
             public void handle(SuccessEvent<List<Promise>> message) {
@@ -58,7 +75,7 @@ public class AsyncUtilUsage {
 
         earlier(
                 someLongOperation(3000).setTag("Example 3/Operation 1").timeout(2400),
-                someLongOperation(2450 - (int)Math.round(Math.random() * 100)).setTag("Example 3/Operation 2"),
+                someLongOperation(2450 - (int) Math.round(Math.random() * 100)).setTag("Example 3/Operation 2"),
                 someLongOperation(3200).setTag("Example 3/Operation 3")
         ).onSuccess(new Callback<SuccessEvent<Promise>>() {
             @Override

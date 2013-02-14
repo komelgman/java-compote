@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Sergey Yungman (aka komelgman)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kom.events;
 
 import kom.util.callback.Callback;
@@ -35,7 +51,7 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
             }
         }
 
-        listeners.add((Callback<Event>)listener);
+        listeners.add((Callback<Event>) listener);
     }
 
     @Override
@@ -49,7 +65,7 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
         List<Callback<Event>> listeners = listenersMap.get(eventType);
 
         if (listeners != null) {
-            listeners.remove((Callback<Event>)listener);
+            listeners.remove((Callback<Event>) listener);
         }
     }
 
@@ -88,7 +104,7 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
             final Class<?> eventType = events.removeLast();
 
             if (eventType != null && Event.class.isAssignableFrom(eventType)) {
-                if (result.contains((Class<? extends Event>)eventType)) {
+                if (result.contains((Class<? extends Event>) eventType)) {
                     continue;
                 }
 
