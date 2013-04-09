@@ -18,60 +18,41 @@ package kom.events;
 
 import kom.util.callback.Callback;
 import kom.util.callback.CallbackExecutor;
+import kom.util.callback.RunnableCallbackExecutor;
+import kom.util.collections.ConcurrentMapOfList;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @SuppressWarnings("unchecked")
-public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> {
-    private static final Logger log = Logger.getLogger(EventDispatcherImpl.class.getName());
-
+public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<T> {
     private static final Map<Class<? extends Event>, List<Class<? extends Event>>> eventsCache
             = new ConcurrentHashMap<Class<? extends Event>, List<Class<? extends Event>>>();
 
-    private final Map<Class<? extends Event>, List<Callback<Event>>>
-            listenersMap = new ConcurrentHashMap<Class<? extends Event>, List<Callback<Event>>>();
+    private final ConcurrentMapOfList<Class<? extends Event>, Callback<Event>>
+            listenersMap = new ConcurrentMapOfList<Class<? extends Event>, Callback<Event>>();
 
     private CallbackExecutor executor;
 
     @Override
     public <Y extends T> void addEventListener(Class<Y> eventType, Callback<? super Y> listener) {
-        List<Callback<Event>> listeners = listenersMap.get(eventType);
-
-        if (listeners == null) {
-            synchronized (listenersMap) {
-                if (listenersMap.containsKey(eventType)) {
-                    listeners = listenersMap.get(eventType);
-                } else {
-                    listeners = Collections.synchronizedList(new ArrayList<Callback<Event>>());
-                    listenersMap.put(eventType, listeners);
-                }
-            }
-        }
-
-        listeners.add((Callback<Event>) listener);
+        listenersMap.add(eventType, (Callback<Event>) listener);
     }
 
     @Override
-    public void removeEventListener(Class<? extends T> eventType) {
+    public <Y extends T> void removeEventListener(Class<Y> eventType, Callback<? super Y> listener) {
+        listenersMap.remove(eventType, (Callback<Event>)listener);
+    }
+
+    @Override
+    public void removeEventListeners(Class<? extends T> eventType) {
         listenersMap.remove(eventType);
     }
 
     @Override
-    @SuppressWarnings("RedundantCast")
-    public <Y extends T> void removeEventListener(Class<Y> eventType, Callback<? super Y> listener) {
-        List<Callback<Event>> listeners = listenersMap.get(eventType);
-
-        if (listeners != null) {
-            listeners.remove((Callback<Event>) listener);
-        }
-    }
-
-    @Override
     public void removeEventListeners() {
-        listenersMap.clear();
+        listenersMap.removeAll();
     }
 
     @Override
@@ -121,36 +102,12 @@ public class EventDispatcherImpl<T extends Event> implements EventDispatcher<T> 
     }
 
     protected void dispatchEvent(Class<? extends Event> eventType, T event) {
-        List<Callback<Event>> listeners = listenersMap.get(eventType);
-
-        if (listeners == null) {
-            return;
-        }
-
         if (executor == null) {
-            manualHandleEvent(event, listeners);
-        } else {
-            handleEventOnExecutor(event, listeners);
+            executor = RunnableCallbackExecutor.getInstance();
         }
-    }
 
-    private void handleEventOnExecutor(T event, List<Callback<Event>> listeners) {
-        for (Callback<Event> listener : listeners) {
+        for (Callback<Event> listener : listenersMap.obtainListCopy(eventType)) {
             executor.execute(listener, event);
-        }
-    }
-
-    private void manualHandleEvent(T event, List<Callback<Event>> listeners) {
-        for (Callback<Event> listener : listeners) {
-            executeCallback(event, listener);
-        }
-    }
-
-    private void executeCallback(T event, Callback<Event> listener) {
-        try {
-            listener.handle(event);
-        } catch (Exception e) {
-            log.log(Level.WARNING, e.getMessage(), e);
         }
     }
 

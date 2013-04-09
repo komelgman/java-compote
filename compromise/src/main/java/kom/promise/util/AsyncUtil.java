@@ -18,9 +18,9 @@ package kom.promise.util;
 
 import kom.promise.Deferred;
 import kom.promise.Promise;
+import kom.promise.events.PromiseEvent;
 import kom.promise.events.AbortEvent;
 import kom.promise.events.FailEvent;
-import kom.promise.events.PromiseEvent;
 import kom.promise.events.SuccessEvent;
 import kom.util.callback.Callback;
 

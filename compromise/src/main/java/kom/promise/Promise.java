@@ -16,7 +16,8 @@
 
 package kom.promise;
 
-import kom.events.EventDispatcherImpl;
+import kom.events.DefaultEventDispatcher;
+import kom.events.EventDispatcher;
 import kom.promise.events.*;
 import kom.promise.util.PromiseEnvironment;
 import kom.util.callback.Callback;
@@ -34,7 +35,7 @@ import java.util.logging.Logger;
 public class Promise<T> {
     private static final Logger log = Logger.getLogger(Promise.class.getName());
 
-    private final EventDispatcherImpl<PromiseEvent> dispatcher = new EventDispatcherImpl<PromiseEvent>();
+    private final EventDispatcher<PromiseEvent> dispatcher = new DefaultEventDispatcher<PromiseEvent>();
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition awaiter = lock.newCondition();
 
@@ -48,6 +49,16 @@ public class Promise<T> {
 
     public Promise() {
         setEnvironment(null);
+    }
+
+    public void setEnvironment(PromiseEnvironment value) {
+        if (value == null) {
+            this.environment.set(PromiseEnvironment.getDefaultEnvironment());
+        } else {
+            this.environment.set(value);
+        }
+
+        dispatcher.setCallbackExecutor(environment.get().getCallbackExecutor());
     }
 
     public Promise<T> onSuccess(Callback<? super SuccessEvent<T>> callback) {
@@ -73,7 +84,6 @@ public class Promise<T> {
     public boolean abort(Object data) {
         return signalAboutCompletion(AbortEvent.class, data);
     }
-
 
     public Promise<T> timeout(int msecs) {
         final TimerTask task = new TimerTask() {
@@ -122,7 +132,7 @@ public class Promise<T> {
         }
     }
 
-    <A extends PromiseEvent<Object>> boolean signalAboutProgress(Class<A> reasonType, Object data) {
+    <A extends PromiseEvent<Object>> boolean signalAboutUpdate(Class<A> reasonType, Object data) {
         if (isComplete.get()) {
             warningAboutCompletedTask(reasonType);
             return false;
@@ -167,34 +177,24 @@ public class Promise<T> {
         }
     }
 
-    private <A extends PromiseEvent> Promise<T> attachCallback(Class<A> reasonType, Callback<? super A> callback) {
+    private <A extends PromiseEvent> Promise<T> attachCallback(Class<A> observedEvent, Callback<? super A> callback) {
         if (callback == null) {
             throw new NullPointerException("Callback can't be NULL");
         }
 
         if (isComplete.get()) {
-            executeCallback(reasonType, (Callback<PromiseEvent>) callback);
+            executeCallback(observedEvent, (Callback<PromiseEvent>) callback);
         } else {
-            dispatcher.addEventListener(reasonType, callback);
+            dispatcher.addEventListener(observedEvent, callback);
         }
 
         return this;
     }
 
-    private <A extends PromiseEvent> void executeCallback(Class<A> reasonType, Callback<PromiseEvent> callback) {
-        if ((reasonType == PromiseEvent.class) || (reasonOfTaskCompletion.getClass() == reasonType)) {
+    private <A extends PromiseEvent> void executeCallback(Class<A> observedEvent, Callback<PromiseEvent> callback) {
+        if ((observedEvent == PromiseEvent.class) || (reasonOfTaskCompletion.getClass() == observedEvent)) {
             getEnvironment().executeCallback(callback, reasonOfTaskCompletion);
         }
-    }
-
-    public void setEnvironment(PromiseEnvironment value) {
-        if (value == null) {
-            this.environment.set(PromiseEnvironment.getDefaultEnvironment());
-        } else {
-            this.environment.set(value);
-        }
-
-        dispatcher.setCallbackExecutor(environment.get().getCallbackExecutor());
     }
 
     protected PromiseEnvironment getEnvironment() {
@@ -206,7 +206,7 @@ public class Promise<T> {
     }
 
     public T getSuccessResult() {
-        if (reasonOfTaskCompletion instanceof SuccessEvent) {
+        if (reasonOfTaskCompletion.getClass() == SuccessEvent.class) {
             return ((SuccessEvent<T>) reasonOfTaskCompletion).getData();
         }
 
@@ -238,30 +238,31 @@ public class Promise<T> {
         return tag;
     }
 
-    /**
-     * You can use this method for reset and reuse promise,
-     * without creating new instance
-     * <p/>
-     * Warning: This method not thread safe,
-     * you must be sure that the Promise instance is no longer used.
-     *
-     * @param instance - Promise whose state is reset
-     */
-    public static void reset(Promise instance) {
-        if (!instance.isComplete.compareAndSet(true, false)) {
-            throw new IllegalStateException("Can't reset not finished task");
-        }
-
-        final TimerTask timerTask = (TimerTask) instance.timerTask.getAndSet(null);
-        if (timerTask != null) {
-            timerTask.cancel();
-        }
-
-        instance.reasonOfTaskCompletion = null;
-        instance.tag = null;
-
-        instance.dispatcher.removeEventListeners();
-        instance.dispatcher.setCallbackExecutor(null);
-        instance.environment.set(null);
-    }
+//
+//    /**
+//     * You can use this method for reset and reuse promise,
+//     * without creating new instance
+//     * <p/>
+//     * Warning: This method not thread safe,
+//     * you must be sure that the Promise instance is no longer used.
+//     *
+//     * @param instance - Promise whose state is reset
+//     */
+//    public static void reset(Promise instance) {
+//        if (!instance.isComplete.compareAndSet(true, false)) {
+//            throw new IllegalStateException("Can't reset not finished task");
+//        }
+//
+//        final TimerTask timerTask = (TimerTask) instance.timerTask.getAndSet(null);
+//        if (timerTask != null) {
+//            timerTask.cancel();
+//        }
+//
+//        instance.reasonOfTaskCompletion = null;
+//        instance.tag = null;
+//
+//        instance.dispatcher.removeEventListeners();
+//        instance.dispatcher.setCallbackExecutor(null);
+//        instance.environment.set(null);
+//    }
 }

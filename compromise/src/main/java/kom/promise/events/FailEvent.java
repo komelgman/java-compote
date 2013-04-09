@@ -16,6 +16,4 @@
 
 package kom.promise.events;
 
-public final class FailEvent extends PromiseEvent {
-
-}
+public final class FailEvent extends PromiseEvent {}

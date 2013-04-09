@@ -57,7 +57,7 @@ public class Deferred<T> {
     }
 
     public boolean update(Object data) {
-        return promise.signalAboutProgress(UpdateEvent.class, data);
+        return promise.signalAboutUpdate(UpdateEvent.class, data);
     }
 
     public Promise<T> getPromise() {

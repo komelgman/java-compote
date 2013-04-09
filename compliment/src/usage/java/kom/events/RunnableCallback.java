@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package kom.util.callback;
+package kom.events;
+
+import kom.util.callback.Callback;
 
 public interface RunnableCallback<T> extends Callback<T>, Runnable {
 

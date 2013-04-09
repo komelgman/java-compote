@@ -24,6 +24,7 @@ public class RunnableCallbackExecutor implements CallbackExecutor {
     private static final Logger log = Logger.getLogger(RunnableCallbackExecutor.class.getName());
 
     private volatile Executor executor = null;
+    private ExceptionHandler exceptionHandler;
 
     public RunnableCallbackExecutor() {
     }
@@ -46,12 +47,21 @@ public class RunnableCallbackExecutor implements CallbackExecutor {
             }
         } catch (Exception e) {
             log.log(Level.WARNING, e.getMessage(), e);
+
+            if (exceptionHandler != null) {
+                execute(exceptionHandler, e);
+            }
         }
     }
 
     @Override
     public void setRunnableExecutor(Executor runnableExecutor) {
         this.executor = runnableExecutor;
+    }
+
+    @Override
+    public void setExceptionHandler(ExceptionHandler exceptionHandler) {
+        this.exceptionHandler = exceptionHandler;
     }
 
     public static CallbackExecutor getInstance() {

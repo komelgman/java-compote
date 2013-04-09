@@ -22,4 +22,5 @@ public interface CallbackExecutor {
     public <T> void execute(Callback<T> callback, T data);
 
     public void setRunnableExecutor(Executor threadExecutor);
+    public void setExceptionHandler(ExceptionHandler exceptionHandler);
 }

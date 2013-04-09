@@ -17,7 +17,6 @@
 package kom.events;
 
 import kom.util.callback.Callback;
-import kom.util.callback.RunnableCallback;
 import kom.util.callback.RunnableCallbackExecutor;
 
 public class EventDispatcherUsage {
@@ -86,7 +85,7 @@ public class EventDispatcherUsage {
         });
 
 
-        ((EventDispatcherImpl) dispatcher).setCallbackExecutor(new RunnableCallbackExecutor());
+        ((DefaultEventDispatcher) dispatcher).setCallbackExecutor(new RunnableCallbackExecutor());
 
         dispatcher.dispatchEvent(new U1Event("Hello world!!!"));
         dispatcher.dispatchEvent(new U2Event("Bye, bye", 1));
@@ -96,7 +95,7 @@ public class EventDispatcherUsage {
 
 
     private void init() {
-        dispatcher = new EventDispatcherImpl<UBaseEvent>();
+        dispatcher = new DefaultEventDispatcher<UBaseEvent>();
     }
 
     private class U1Event extends UBaseEvent {
