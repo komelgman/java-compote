@@ -19,19 +19,18 @@ package kom.events;
 import kom.util.callback.Callback;
 import kom.util.callback.CallbackExecutor;
 import kom.util.callback.RunnableCallbackExecutor;
-import kom.util.collections.ConcurrentMapOfList;
+import kom.util.collections.ConcurrentMultiMap;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 @SuppressWarnings("unchecked")
 public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<T> {
     private static final Map<Class<? extends Event>, List<Class<? extends Event>>> eventsCache
             = new ConcurrentHashMap<Class<? extends Event>, List<Class<? extends Event>>>();
 
-    private final ConcurrentMapOfList<Class<? extends Event>, Callback<Event>>
-            listenersMap = new ConcurrentMapOfList<Class<? extends Event>, Callback<Event>>();
+    private final ConcurrentMultiMap<Class<? extends Event>, Callback<Event>>
+            listenersMap = new ConcurrentMultiMap<Class<? extends Event>, Callback<Event>>();
 
     private CallbackExecutor executor;
 
@@ -101,14 +100,17 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
         return result;
     }
 
-    protected void dispatchEvent(Class<? extends Event> eventType, T event) {
+    protected void dispatchEvent(Class<? extends Event> eventType, final T event) {
         if (executor == null) {
             executor = RunnableCallbackExecutor.getInstance();
         }
 
-        for (Callback<Event> listener : listenersMap.obtainListCopy(eventType)) {
-            executor.execute(listener, event);
-        }
+        listenersMap.foreach(eventType, new Callback<Callback<Event>>() {
+            @Override
+            public void handle(Callback<Event> listener) {
+                executor.execute(listener, event);
+            }
+        });
     }
 
     public void setCallbackExecutor(CallbackExecutor executor) {
