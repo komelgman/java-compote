@@ -48,9 +48,11 @@ public class ExtensionManager<T> implements Extended<T>, Extensible<T> {
         }
     }
 
+
     @Override
-    public T unregisterExtension(Class<? extends T> name) {
-        return extensions.remove(name);
+    @SuppressWarnings("unchecked")
+    public <E extends T> E unregisterExtension(Class<E> name) {
+        return (E)extensions.remove(name);
     }
 
     @Override
