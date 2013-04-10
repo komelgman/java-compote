@@ -75,6 +75,7 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
         }
     }
 
+    @SuppressWarnings("SuspiciousMethodCalls")
     private List<Class<? extends Event>> getEvents(Class<? extends Event> fromEventType) {
         final ArrayList<Class<? extends Event>> result = new ArrayList<Class<? extends Event>>();
         final LinkedList<Class<?>> events = new LinkedList<Class<?>>();
@@ -84,11 +85,11 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
             final Class<?> eventType = events.removeLast();
 
             if (eventType != null && Event.class.isAssignableFrom(eventType)) {
-                if (result.contains((Class<? extends Event>) eventType)) {
+                if (result.contains(eventType)) {
                     continue;
                 }
 
-                result.add((Class<? extends Event>) eventType);
+                result.add((Class<Event>) eventType);
                 events.addFirst(eventType.getSuperclass());
 
                 for (Class<?> item : eventType.getInterfaces()) {
