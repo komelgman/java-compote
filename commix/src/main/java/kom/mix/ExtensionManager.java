@@ -18,6 +18,7 @@ package kom.mix;
 
 import java.security.InvalidParameterException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -48,8 +49,8 @@ public class ExtensionManager<T> implements Extended<T>, Extensible<T> {
     }
 
     @Override
-    public void unregisterExtension(Class<? extends T> name) {
-        extensions.remove(name);
+    public T unregisterExtension(Class<? extends T> name) {
+        return extensions.remove(name);
     }
 
     @Override
@@ -65,6 +66,6 @@ public class ExtensionManager<T> implements Extended<T>, Extensible<T> {
 
     @Override
     public Collection<T> getExtensions() {
-        return extensions.values();
+        return Collections.unmodifiableCollection(extensions.values());
     }
 }
