@@ -25,14 +25,53 @@ import kom.promise.events.SuccessEvent;
 import kom.util.callback.Callback;
 
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Arrays.asList;
 
+// todo: change implementation of body to AsyncTask
+
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
 public final class AsyncUtil {
+
+    public static <T> Promise<T> wrap(Future<T> future) {
+        return wrap(null, future);
+    }
+
+    public static <T> Promise<T> wrap(PromiseEnvironment environment, final Future<T> future) {
+        return null;//wrap(null, future); todo!!!
+    }
+
+
+    public static <T> Promise<T> wrap(Callable<T> callable) {
+        return wrap(null, callable);
+    }
+
+    public static <T> Promise<T> wrap(PromiseEnvironment environment, final Callable<T> callable) {
+        if (environment == null) {
+            environment = PromiseEnvironment.getDefaultEnvironment();
+        }
+
+        final Promise<T> result = environment.getPromise();
+        final Deferred<T> deferred = new Deferred<T>(result);
+
+        environment.executeRunnable(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    deferred.resolve(callable.call());
+                } catch (Exception e) {
+                    deferred.reject(e);
+                }
+            }
+        });
+
+        return result;
+    }
 
     public static Promise<List<AsyncTask>> chain(AsyncTask... tasks) {
         return chain(null, asList(tasks));
