@@ -23,6 +23,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+
+/**
+ * Simple concurrent MultiMap based on ConcurrentHashMap and ConcurrentLinkedQueue
+ *
+ * Other implementations:
+ * @link https://github.com/JetBrains/intellij-community/blob/18c487bff12a0bf049ddff3dbb156db4914e5fec/platform/util/src/com/intellij/util/containers/ConcurrentMultiMap.java
+ * @link https://github.com/akka/akka/blob/release-1.3.1/akka-actor/src/main/scala/akka/actor/ActorRegistry.scala
+ */
 public class ConcurrentMultiMap<Key, Value> {
     private final ConcurrentMap<Key, ConcurrentLinkedQueue<Value>> values
             = new ConcurrentHashMap<Key, ConcurrentLinkedQueue<Value>>();
