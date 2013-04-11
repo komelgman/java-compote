@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2013 Sergey Yungman (aka komelgman)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,78 +22,109 @@ import org.junit.Test;
 import java.security.InvalidParameterException;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 public class ExtensionManagerBehavior {
-
-    ExtensionManager<Extension> manager;
+    private ExtensionManager<RootExtension> manager;
+    private NestedExtension nestedExtension;
+    private final RootExtension nullExtension = null;
 
     @Before
     public void before() {
-        manager = new ExtensionManager<Extension>();
+        manager = new ExtensionManager<RootExtension>();
+        nestedExtension = new NestedExtension();
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldThrowExceptionWhenExtensionIsNull() throws Exception {
-        final Extension extension = getNullExtension();
-        manager.registerExtension(extension);
+        manager.registerExtension(nullExtension);
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldThrowExceptionWhenKeyIsNull() throws Exception {
-        final Extension extension = new Extension() {
-        };
-        manager.registerExtension(null, extension);
+        manager.registerExtension(null, nestedExtension);
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldThrowExceptionWhenKeyNotNullAndExtensionIsNull() throws Exception {
-        manager.registerExtension(Extension.class, null);
+        manager.registerExtension(RootExtension.class, null);
     }
 
 
     @Test(expected = InvalidParameterException.class)
     public void shouldThrowExceptionWhenExtensionAlreadyRegistered() throws Exception {
-        final Extension extension = new Extension() {
-        };
-
-        manager.registerExtension(extension);
-        manager.registerExtension(extension);
+        manager.registerExtension(nestedExtension);
+        manager.registerExtension(nestedExtension);
     }
 
     @Test
     public void registeredExtensionShouldBeExists() throws Exception {
-        final Extension extension = new Extension() {
-        };
-
         // register extension by his class
-        assertThat(manager.hasExtension(extension.getClass()), is(false));
-        manager.registerExtension(extension);
-        assertThat(manager.hasExtension(extension.getClass()), is(true));
+        assertThat(manager.hasExtension(NestedExtension.class), is(false));
+        manager.registerExtension(nestedExtension);
+        assertThat(manager.hasExtension(NestedExtension.class), is(true));
 
-        // register extension by his superclass
-        assertThat(manager.hasExtension(Extension.class), is(false));
-        manager.registerExtension(Extension.class, extension);
-        assertThat(manager.hasExtension(Extension.class), is(true));
+        // or register extension by his superclass
+        assertThat(manager.hasExtension(RootExtension.class), is(false));
+        manager.registerExtension(RootExtension.class, nestedExtension);
+        assertThat(manager.hasExtension(RootExtension.class), is(true));
+    }
+
+    @Test
+    public void registeredExtensionShouldBeReturns() throws Exception {
+        // register extension by his class
+        assertNull(manager.getExtension(NestedExtension.class));
+        manager.registerExtension(nestedExtension);
+        assertEquals(nestedExtension, manager.getExtension(NestedExtension.class));
+
+        // or register extension by his superclass
+        assertNull(manager.getExtension(RootExtension.class));
+        manager.registerExtension(RootExtension.class, nestedExtension);
+        assertEquals(nestedExtension, manager.getExtension(RootExtension.class));
     }
 
     @Test
     public void unregisteredExtensionShouldBeNotExists() throws Exception {
-        final Extension extension = new Extension() {
-        };
-
         // register extension by his class
-        manager.registerExtension(extension);
-        manager.unregisterExtension(extension.getClass());
-        assertThat(manager.hasExtension(extension.getClass()), is(false));
+        manager.registerExtension(nestedExtension);
+        manager.unregisterExtension(NestedExtension.class);
+        assertThat(manager.hasExtension(NestedExtension.class), is(false));
 
-        // register extension by his superclass
-        manager.registerExtension(Extension.class, extension);
-        manager.unregisterExtension(Extension.class);
-        assertThat(manager.hasExtension(Extension.class), is(false));
+        // or register extension by his superclass
+        manager.registerExtension(RootExtension.class, nestedExtension);
+        manager.unregisterExtension(RootExtension.class);
+        assertThat(manager.hasExtension(RootExtension.class), is(false));
     }
 
-    public Extension getNullExtension() {
-        return null;
+    @Test
+    public void unregisteredExtensionShouldBeNotReturns() throws Exception {
+        // register extension by his class
+        manager.registerExtension(nestedExtension);
+        manager.unregisterExtension(NestedExtension.class);
+        assertNull(manager.getExtension(NestedExtension.class));
+
+        // or register extension by his superclass
+        manager.registerExtension(RootExtension.class, nestedExtension);
+        manager.unregisterExtension(RootExtension.class);
+        assertNull(manager.getExtension(RootExtension.class));
+    }
+
+    @Test
+    public void allExtensionShouldBeReturns() throws Exception {
+        // register extension by his class
+        manager.registerExtension(nestedExtension);
+
+        // or register extension by his superclass
+        manager.registerExtension(RootExtension.class, nestedExtension);
+
+        assertNotNull(manager.getExtensions());
+        assertEquals(2, manager.getExtensions().size());
+    }
+
+
+    private class NestedExtension extends RootExtension {
+    }
+
+    private class RootExtension implements Extension {
     }
 }

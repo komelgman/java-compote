@@ -23,7 +23,7 @@ import kom.mix.ExtensionManager;
 import java.util.Collection;
 
 public class Player implements Extended<Extension> {
-    private final ExtensionManager<Extension> extman = new ExtensionManager();
+    private final ExtensionManager<Extension> extman = new ExtensionManager<Extension>();
 
     public Player(int id) {
         readAbilitiesFromBD(id);
