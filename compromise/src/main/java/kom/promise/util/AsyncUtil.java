@@ -22,10 +22,12 @@ import kom.promise.events.PromiseEvent;
 import kom.promise.events.AbortEvent;
 import kom.promise.events.FailEvent;
 import kom.promise.events.SuccessEvent;
+import kom.promise.exceptions.PromiseException;
 import kom.util.callback.Callback;
 
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -109,11 +111,8 @@ public final class AsyncUtil {
                     currentTask.set(task);
 
                     task.start().await();
-
-                    Class reason = task.getReasonOfTaskCompletion().getClass();
-                    if (reason.equals(FailEvent.class) || reason.equals(AbortEvent.class)) {
+                    if (!task.isSuccessed()) {
                         deferred.reject(task);
-                        return;
                     }
 
                     if (isCancelled.get()) {

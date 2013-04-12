@@ -43,7 +43,7 @@ public class ChainUsage {
                 Object data = message.getData();
                 if (data instanceof Promise) {
                     System.out.println(((Promise) data).getTag()
-                            + " -> " + ((Promise) data).getSuccessResult());
+                            + " -> " + ((Promise) data).tryGetResult());
                 }
             }
         }).onSuccess(new Callback<SuccessEvent<List<AsyncTask>>>() {

@@ -20,6 +20,7 @@ import kom.events.DefaultEventDispatcher;
 import kom.events.EventDispatcher;
 import kom.promise.Promise;
 import kom.promise.events.*;
+import kom.promise.exceptions.PromiseException;
 import kom.promise.util.AsyncContext;
 import kom.util.callback.Callback;
 
@@ -44,7 +45,7 @@ public class PromiseImpl<T> implements Promise<T> {
     private final AtomicReference<AsyncContext> context = new AtomicReference<AsyncContext>(null);
 
     private AtomicBoolean isComplete = new AtomicBoolean(false);
-    private volatile PromiseEvent<Object> reasonOfTaskCompletion = null;
+    private volatile PromiseEvent<Object> completeEvent = null;
     private volatile Object tag = null;
 
     public PromiseImpl() {
@@ -144,6 +145,41 @@ public class PromiseImpl<T> implements Promise<T> {
         }
     }
 
+    @Override
+    public T tryGetResult() {
+        if (isSuccessed()) {
+            return ((SuccessEvent<T>) completeEvent).getData();
+        }
+
+        return null;
+    }
+
+    @Override
+    public Object getRawResult() {
+        if (isCompleted()) {
+            return completeEvent.getData();
+        }
+
+        throw new IllegalStateException("Result can be retrieved only if promise was completed");
+    }
+
+    @Override
+    public T getResult() throws PromiseException {
+        if (isSuccessed()) {
+            return ((SuccessEvent<T>) completeEvent).getData();
+        }
+
+        if (isAborted()) {
+            throw new PromiseException(AbortEvent.class, completeEvent.getData());
+        }
+
+        if (isFailed()) {
+            throw new PromiseException(FailEvent.class, completeEvent.getData());
+        }
+
+        throw new IllegalStateException("Result can be retrieved only if promise was completed");
+    }
+
     protected <A extends PromiseEvent<Object>> boolean triggerEvent(Class<A> reasonType, Object data) {
         if (isComplete.get()) {
             warningAboutCompletedTask(reasonType);
@@ -164,10 +200,10 @@ public class PromiseImpl<T> implements Promise<T> {
             return false;
         }
 
-        reasonOfTaskCompletion = context().event(reasonType);
-        reasonOfTaskCompletion.setData(data);
+        completeEvent = context().event(reasonType);
+        completeEvent.setData(data);
 
-        dispatcher.dispatchEvent(reasonOfTaskCompletion);
+        dispatcher.dispatchEvent(completeEvent);
 
         notifyAboutTaskCompleted();
 
@@ -177,7 +213,7 @@ public class PromiseImpl<T> implements Promise<T> {
     private <A extends PromiseEvent<Object>> void warningAboutCompletedTask(Class<A> reasonType) {
         log.log(Level.WARNING, "Promise was notified with reason " + reasonType.getSimpleName() + "\n"
                 + "But this promise has already been stopped by reason "
-                + this.reasonOfTaskCompletion.getClass().getSimpleName());
+                + this.completeEvent.getClass().getSimpleName());
     }
 
     private void notifyAboutTaskCompleted() {
@@ -204,27 +240,13 @@ public class PromiseImpl<T> implements Promise<T> {
     }
 
     private <A extends PromiseEvent> void executeCallback(Class<A> observedEvent, Callback<PromiseEvent> callback) {
-        if ((observedEvent == PromiseEvent.class) || (reasonOfTaskCompletion.getClass() == observedEvent)) {
-            context().executeCallback(callback, reasonOfTaskCompletion);
+        if ((observedEvent == PromiseEvent.class) || (completeEvent.getClass() == observedEvent)) {
+            context().executeCallback(callback, completeEvent);
         }
     }
 
     protected AsyncContext context() {
         return context.get();
-    }
-
-    @Override
-    public PromiseEvent getReasonOfTaskCompletion() {
-        return reasonOfTaskCompletion;
-    }
-
-    @Override
-    public T getSuccessResult() {
-        if (reasonOfTaskCompletion.getClass() == SuccessEvent.class) {
-            return ((SuccessEvent<T>) reasonOfTaskCompletion).getData();
-        }
-
-        throw new IllegalStateException("Result can be retrieved only if promise was successfully completed");
     }
 
     @Override
@@ -234,17 +256,17 @@ public class PromiseImpl<T> implements Promise<T> {
 
     @Override
     public boolean isAborted() {
-        return isComplete.get() && reasonOfTaskCompletion.getClass() == AbortEvent.class;
+        return isComplete.get() && completeEvent.getClass() == AbortEvent.class;
     }
 
     @Override
     public boolean isSuccessed() {
-        return isComplete.get() && reasonOfTaskCompletion.getClass() == SuccessEvent.class;
+        return isComplete.get() && completeEvent.getClass() == SuccessEvent.class;
     }
 
     @Override
     public boolean isFailed() {
-        return isComplete.get() && reasonOfTaskCompletion.getClass() == FailEvent.class;
+        return isComplete.get() && completeEvent.getClass() == FailEvent.class;
     }
 
     @Override

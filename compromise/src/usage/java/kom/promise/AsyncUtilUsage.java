@@ -48,7 +48,7 @@ public class AsyncUtilUsage {
             @Override
             public void handle(SuccessEvent<List<Promise>> message) {
                 for (Promise promise : message.getData()) {
-                    System.out.println(promise.getTag() + " -> " + promise.getSuccessResult());
+                    System.out.println(promise.getTag() + " -> " + promise.tryGetResult());
                 }
             }
         });
@@ -65,7 +65,7 @@ public class AsyncUtilUsage {
             @Override
             public void handle(SuccessEvent<Promise> message) {
                 Promise promise = message.getData();
-                System.out.println(promise.getTag() + " -> " + promise.getSuccessResult());
+                System.out.println(promise.getTag() + " -> " + promise.tryGetResult());
             }
         });
     }
@@ -81,14 +81,14 @@ public class AsyncUtilUsage {
             @Override
             public void handle(SuccessEvent<Promise> message) {
                 Promise promise = message.getData();
-                System.out.println(promise.getTag() + " -> " + promise.getSuccessResult());
+                System.out.println(promise.getTag() + " -> " + promise.tryGetResult());
             }
         }).onAbort(new Callback<AbortEvent>() {
             @Override
             public void handle(AbortEvent message) {
                 Object data = message.getData();
                 if (data instanceof Promise) {
-                    System.out.println(((Promise) data).getTag() + " -> " + ((Promise) data).getReasonOfTaskCompletion().getData());
+                    System.out.println(((Promise) data).getTag() + " -> " + ((Promise) data).getRawResult());
                 } else if (data instanceof Throwable) {
                     System.out.println(((Throwable) data).getMessage());
                 }
@@ -105,7 +105,7 @@ public class AsyncUtilUsage {
                 onAbort(new Callback<AbortEvent>() {
                     @Override
                     public void handle(AbortEvent message) {
-                        System.out.println(getTag() + " -> " + getReasonOfTaskCompletion().getData());
+                        System.out.println(getTag() + " -> " + getRawResult());
                     }
                 });
             }

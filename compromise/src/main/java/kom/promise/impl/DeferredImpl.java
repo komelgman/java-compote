@@ -18,12 +18,10 @@ package kom.promise.impl;
 
 import kom.promise.Deferred;
 import kom.promise.Promise;
-import kom.promise.events.AbortEvent;
 import kom.promise.events.FailEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.events.UpdateEvent;
 import kom.promise.util.AsyncContext;
-import kom.util.callback.Callback;
 
 public class DeferredImpl<T> extends PromiseImpl<T> implements Deferred<T> {
 

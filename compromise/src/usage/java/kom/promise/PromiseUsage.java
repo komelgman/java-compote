@@ -64,7 +64,7 @@ public class PromiseUsage {
     private void example3() {
         System.out.println("Example 3: blocking semantic, please wait 10 sec");
 
-        String result = someLongMethod(10000).await().getSuccessResult();
+        String result = someLongMethod(10000).await().tryGetResult();
         System.out.println("Example 3 result: " + result);
     }
 
@@ -72,11 +72,12 @@ public class PromiseUsage {
         System.out.println("Example 4: update state, please wait 1 sec");
 
         String result = someLongMethod(1000).onUpdate(new Callback<UpdateEvent>() {
-            @Override
-            public void handle(UpdateEvent message) {
-                System.out.println("Example 4 progress: " + message.getData());
-            }
-        }).await().getSuccessResult();
+                @Override
+                public void handle(UpdateEvent message) {
+                    System.out.println("Example 4 progress: " + message.getData());
+                }
+        }).await().tryGetResult();
+
         System.out.println("Example 4 result: " + result);
     }
 
