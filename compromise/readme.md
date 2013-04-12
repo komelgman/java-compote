@@ -1,7 +1,7 @@
 Compromise
 ==========
 
-Compromise is a Java Deferred/Promise pattern realisation
+Compromise is a Deferred/Promise pattern Java implementation
 
 Dependency
 ----------
@@ -24,7 +24,32 @@ Features
 
 Examples (more can be found in src/usage directory)
 --------
-### Simple Deferred and Promise usage
+###Async method example
+```Java
+Promise<ResultType> someAsyncMethod() {
+    final Deferred<ResultType> deferred = ...
+    final SomeAsyncobject asyncObject = ...;
+
+    deferred.onAbort(new Callback<AbortEvent>() {
+        @Override
+        public void handle(AbortEvent message) {
+            // stopping async code
+            asyncObject.cancel();
+        }
+    });
+
+    try {
+        // retrieving async code result
+        deferred.resolve(asyncObejct.getResult());
+    } catch (Exception e) {
+        // some error caused
+        deferred.reject(e);
+    }
+
+    return deferred.getPromise();
+}
+```
+###Deferred and Promise usage
 Creations:
 ```Java
 // from default async context
