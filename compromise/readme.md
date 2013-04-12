@@ -18,8 +18,8 @@ Features
   - ```.wrap(Future...); // create promise from java future```
   - ```.wrap(Callable...); // create promise from callable```
   - ```.chain(asyncTask1, asyncTask2, ...); // asyncTasks sequential execution```
-  - ```.parallel(promise1, promise2, ...); // wait for all promises will successfully fulfilled (reject on first failed/aborted)```
-  - ```.earlier(promise1, promise2, ...); // wait for first promises will fulfilled (resolve on success, reject on fail/abort)```
+  - ```.parallel(p1, p2, ...); // wait for all promises will successfully fulfilled (reject on first failed/aborted)```
+  - ```.earlier(p1, p2, ...); // wait for first promise will fulfilled (resolve on success, reject on fail/abort)```
 
 Examples
 --------
