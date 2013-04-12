@@ -16,6 +16,7 @@
 
 package kom.promise;
 
+import kom.promise.events.AbortEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.util.AsyncTask;
 import kom.util.callback.Callback;
@@ -49,13 +50,13 @@ public class AsyncTaskUsage {
     private Promise<String> someLongMethod(final int delay) {
         return new AsyncTask<String>() {
             {
-                // setEnvironment(?); // can set some environment here
+                // setContext(?); // can set some environment here
             }
 
             private volatile boolean isCancelled = false;
 
             @Override
-            protected void process() {
+            public void run() {
                 try {
                     // some long job
                     int i = 0;
@@ -75,7 +76,7 @@ public class AsyncTaskUsage {
             }
 
             @Override
-            protected void canceller() {
+            public void handle(AbortEvent message) {
                 isCancelled = true;
             }
         }.start();

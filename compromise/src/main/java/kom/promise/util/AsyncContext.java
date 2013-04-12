@@ -16,8 +16,9 @@
 
 package kom.promise.util;
 
-import kom.promise.Promise;
+import kom.promise.Deferred;
 import kom.promise.events.PromiseEvent;
+import kom.promise.impl.DeferredImpl;
 import kom.util.callback.Callback;
 import kom.util.callback.CallbackExecutor;
 import kom.util.callback.RunnableCallbackExecutor;
@@ -27,13 +28,13 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 @SuppressWarnings("UnusedDeclaration")
-public class PromiseEnvironment {
+public class AsyncContext {
     private static final Timer scheduler = new Timer(true);
 
     private final CallbackExecutor callbackExecutor;
     private final Executor runnableExecutor;
 
-    public PromiseEnvironment(Executor runnableExecutor, CallbackExecutor callbackExecutor) {
+    public AsyncContext(Executor runnableExecutor, CallbackExecutor callbackExecutor) {
         if (runnableExecutor == null) {
             runnableExecutor = Executors.newCachedThreadPool();
         }
@@ -47,7 +48,7 @@ public class PromiseEnvironment {
         this.callbackExecutor = callbackExecutor;
     }
 
-    public static PromiseEnvironment getDefaultEnvironment() {
+    public static AsyncContext defaultContext() {
         return SingletonHolder.HOLDER_INSTANCE;
     }
 
@@ -63,7 +64,7 @@ public class PromiseEnvironment {
         runnableExecutor.execute(runnable);
     }
 
-    public <T extends PromiseEvent> T getEvent(Class<T> reasonType) {
+    public <T extends PromiseEvent> T event(Class<T> reasonType) {
         try {
             // can use object pool in this point
             return reasonType.newInstance();
@@ -72,11 +73,9 @@ public class PromiseEnvironment {
         }
     }
 
-    public <T> Promise<T> getPromise() {
+    public <T> Deferred<T> deferred() {
         // can use object pool in this point
-        Promise<T> promise = new Promise<T>();
-        promise.setEnvironment(this);
-        return promise;
+        return new DeferredImpl<T>(this);
     }
 
     public Timer getScheduler() {
@@ -92,6 +91,6 @@ public class PromiseEnvironment {
     }
 
     private static class SingletonHolder {
-        public static final PromiseEnvironment HOLDER_INSTANCE = new PromiseEnvironment(null, null);
+        public static final AsyncContext HOLDER_INSTANCE = new AsyncContext(null, null);
     }
 }

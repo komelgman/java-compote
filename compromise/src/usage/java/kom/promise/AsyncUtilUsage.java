@@ -100,7 +100,7 @@ public class AsyncUtilUsage {
     private Promise<String> someLongOperation(final int delay) {
         return new AsyncTask<String>() {
             {
-                // setEnvironment(?); // can set some environment here
+                // setContext(?); // can set some environment here
 
                 onAbort(new Callback<AbortEvent>() {
                     @Override
@@ -113,7 +113,7 @@ public class AsyncUtilUsage {
             private volatile boolean isCancelled = false;
 
             @Override
-            protected void process() {
+            public void run() {
                 try {
                     // some long job
                     int i = 0;
@@ -133,7 +133,7 @@ public class AsyncUtilUsage {
             }
 
             @Override
-            protected void canceller() {
+            public void handle(AbortEvent message) {
                 isCancelled = true;
             }
         }.start();

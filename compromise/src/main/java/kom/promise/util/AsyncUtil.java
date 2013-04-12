@@ -42,7 +42,7 @@ public final class AsyncUtil {
         return wrap(null, future);
     }
 
-    public static <T> Promise<T> wrap(PromiseEnvironment environment, final Future<T> future) {
+    public static <T> Promise<T> wrap(AsyncContext environment, final Future<T> future) {
         return null;//wrap(null, future); todo!!!
     }
 
@@ -51,13 +51,12 @@ public final class AsyncUtil {
         return wrap(null, callable);
     }
 
-    public static <T> Promise<T> wrap(PromiseEnvironment environment, final Callable<T> callable) {
+    public static <T> Promise<T> wrap(AsyncContext environment, final Callable<T> callable) {
         if (environment == null) {
-            environment = PromiseEnvironment.getDefaultEnvironment();
+            environment = AsyncContext.defaultContext();
         }
 
-        final Promise<T> result = environment.getPromise();
-        final Deferred<T> deferred = new Deferred<T>(result);
+        final Deferred<T> deferred = environment.deferred();
 
         environment.executeRunnable(new Runnable() {
             @Override
@@ -70,7 +69,7 @@ public final class AsyncUtil {
             }
         });
 
-        return result;
+        return deferred.getPromise();
     }
 
     public static Promise<List<AsyncTask>> chain(AsyncTask... tasks) {
@@ -81,17 +80,16 @@ public final class AsyncUtil {
         return chain(null, tasks);
     }
 
-    public static Promise<List<AsyncTask>> chain(PromiseEnvironment environment, AsyncTask... tasks) {
+    public static Promise<List<AsyncTask>> chain(AsyncContext environment, AsyncTask... tasks) {
         return chain(environment, asList(tasks));
     }
 
-    public static Promise<List<AsyncTask>> chain(PromiseEnvironment environment, final List<AsyncTask> tasks) {
+    public static Promise<List<AsyncTask>> chain(AsyncContext environment, final List<AsyncTask> tasks) {
         if (environment == null) {
-            environment = PromiseEnvironment.getDefaultEnvironment();
+            environment = AsyncContext.defaultContext();
         }
 
-        final Promise<List<AsyncTask>> result = environment.getPromise();
-        final Deferred<List<AsyncTask>> deferred = new Deferred<List<AsyncTask>>(result);
+        final Deferred<List<AsyncTask>> deferred = environment.deferred();
 
         environment.executeRunnable(new Runnable() {
             private AtomicBoolean isCancelled = new AtomicBoolean(false);
@@ -99,7 +97,7 @@ public final class AsyncUtil {
 
             @Override
             public void run() {
-                result.onAbort(new Callback<AbortEvent>() {
+                deferred.onAbort(new Callback<AbortEvent>() {
                     @Override
                     public void handle(AbortEvent message) {
                         isCancelled.set(true);
@@ -129,7 +127,7 @@ public final class AsyncUtil {
             }
         });
 
-        return result;
+        return deferred.getPromise();
     }
 
     public static Promise<List<Promise>> parallel(Promise... promises) {
@@ -140,20 +138,19 @@ public final class AsyncUtil {
         return parallel(null, promises);
     }
 
-    public static Promise<List<Promise>> parallel(PromiseEnvironment environment, Promise... promises) {
+    public static Promise<List<Promise>> parallel(AsyncContext environment, Promise... promises) {
         return parallel(environment, asList(promises));
     }
 
-    public static Promise<List<Promise>> parallel(PromiseEnvironment environment, final List<Promise> promises) {
+    public static Promise<List<Promise>> parallel(AsyncContext environment, final List<Promise> promises) {
         if (environment == null) {
-            environment = PromiseEnvironment.getDefaultEnvironment();
+            environment = AsyncContext.defaultContext();
         }
 
         final AtomicInteger count = new AtomicInteger(promises.size());
-        final Promise<List<Promise>> result = environment.getPromise();
-        final Deferred<List<Promise>> deferred = new Deferred<List<Promise>>(result);
+        final Deferred<List<Promise>> deferred = environment.deferred();
 
-        result.onFail(new PromiseCanceller(promises, "One of parallel tasks was failed"))
+        deferred.onFail(new PromiseCanceller(promises, "One of parallel tasks was failed"))
                 .onAbort(new PromiseCanceller(promises, "One of parallel tasks (or main parallel task) was cancelled"));
 
         for (final Promise promise : promises) {
@@ -170,8 +167,8 @@ public final class AsyncUtil {
                     .onAbort(new Callback<AbortEvent>() {
                         @Override
                         public void handle(AbortEvent message) {
-                            if (!result.isCompleted())
-                                result.abort(promise);
+                            if (!deferred.isCompleted())
+                                deferred.abort(promise);
                         }
                     })
                     .onFail(new Callback<FailEvent>() {
@@ -182,7 +179,7 @@ public final class AsyncUtil {
                     });
         }
 
-        return result;
+        return deferred.getPromise();
     }
 
     public static Promise<Promise> earlier(Promise... promises) {
@@ -193,23 +190,22 @@ public final class AsyncUtil {
         return earlier(null, promises);
     }
 
-    public static Promise<Promise> earlier(PromiseEnvironment environment, Promise... promises) {
+    public static Promise<Promise> earlier(AsyncContext environment, Promise... promises) {
         return earlier(environment, asList(promises));
     }
 
-    public static Promise<Promise> earlier(PromiseEnvironment environment, final List<Promise> promises) {
+    public static Promise<Promise> earlier(AsyncContext environment, final List<Promise> promises) {
         if (environment == null) {
-            environment = PromiseEnvironment.getDefaultEnvironment();
+            environment = AsyncContext.defaultContext();
         }
 
-        final Promise<Promise> result = environment.getPromise();
-        final Deferred<Promise> deferred = new Deferred<Promise>(result);
+        final Deferred<Promise> deferred = environment.deferred();
 
-        PromiseCanceller doneCanceller = new PromiseCanceller(promises, "One of earlier tasks was finished");
-        PromiseCanceller abortCanceller = new PromiseCanceller(promises,
+        final PromiseCanceller doneCanceller = new PromiseCanceller(promises, "One of earlier tasks was finished");
+        final PromiseCanceller abortCanceller = new PromiseCanceller(promises,
                 "One of earlier tasks (or main earlier promise) was cancelled");
 
-        result.onFail(doneCanceller)
+        deferred.onFail(doneCanceller)
                 .onSuccess(doneCanceller)
                 .onAbort(abortCanceller);
 
@@ -229,13 +225,13 @@ public final class AsyncUtil {
                     .onAbort(new Callback<AbortEvent>() {
                         @Override
                         public void handle(AbortEvent event) {
-                            if (!result.isCompleted())
-                                result.abort(promise);
+                            if (!deferred.isCompleted())
+                                deferred.abort(promise);
                         }
                     });
         }
 
-        return result;
+        return deferred.getPromise();
     }
 
     private static class PromiseCanceller implements Callback {

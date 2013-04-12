@@ -16,55 +16,40 @@
 
 package kom.promise.util;
 
-import kom.promise.Deferred;
-import kom.promise.Promise;
 import kom.promise.events.AbortEvent;
+import kom.promise.events.FailEvent;
+import kom.promise.events.SuccessEvent;
+import kom.promise.events.UpdateEvent;
+import kom.promise.impl.PromiseImpl;
 import kom.util.callback.Callback;
 
 @SuppressWarnings("UnusedDeclaration")
-public abstract class AsyncTask<T> extends Promise<T> {
-
-    private final Deferred<T> deferred;
+public abstract class AsyncTask<T> extends PromiseImpl<T> implements Callback<AbortEvent>, Runnable {
 
     public AsyncTask() {
-        this.deferred = new Deferred<T>(this, new TaskCanceller());
+        onAbort(this);
     }
 
     public final AsyncTask<T> start() {
-        getEnvironment().executeRunnable(new TaskProcessor());
+        context().executeRunnable(this);
 
         return this;
     }
 
     protected final void resolve(T data) {
-        deferred.resolve(data);
+        triggerEventAndStopProcessing(SuccessEvent.class, data);
     }
 
     protected final void reject(Object data) {
-        deferred.reject(data);
+        triggerEventAndStopProcessing(FailEvent.class, data);
     }
 
     protected final void update(Object data) {
-        deferred.update(data);
+        triggerEvent(UpdateEvent.class, data);
     }
 
-    protected abstract void process();
-
-    protected /* virtual */ void canceller() {
-    }
-
-
-    private class TaskProcessor implements Runnable {
-        @Override
-        public void run() {
-            AsyncTask.this.process();
-        }
-    }
-
-    private class TaskCanceller implements Callback<AbortEvent> {
-        @Override
-        public void handle(AbortEvent message) {
-            AsyncTask.this.canceller();
-        }
+    @Override
+    public void handle(AbortEvent message) {
+        // virtual
     }
 }

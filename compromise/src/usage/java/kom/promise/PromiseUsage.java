@@ -19,6 +19,7 @@ package kom.promise;
 import kom.promise.events.AbortEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.events.UpdateEvent;
+import kom.promise.util.AsyncContext;
 import kom.util.callback.Callback;
 
 public class PromiseUsage {
@@ -81,7 +82,7 @@ public class PromiseUsage {
 
 
     private Promise<String> someLongMethod(final int delay) {
-        final Deferred<String> deferred = new Deferred<String>();
+        final Deferred<String> deferred = AsyncContext.defaultContext().deferred();
 
         new Thread() {
             private boolean isCancelled = false;

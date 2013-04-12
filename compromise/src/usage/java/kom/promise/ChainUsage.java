@@ -16,6 +16,7 @@
 
 package kom.promise;
 
+import kom.promise.events.AbortEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.events.UpdateEvent;
 import kom.promise.util.AsyncTask;
@@ -62,7 +63,7 @@ public class ChainUsage {
             }
 
             @Override
-            protected void process() {
+            public void run() {
                 try {
                     // some long job
                     int i = 0;
@@ -83,7 +84,7 @@ public class ChainUsage {
             }
 
             @Override
-            protected void canceller() {
+            public void handle(AbortEvent message) {
                 isCancelled = true;
             }
         };
