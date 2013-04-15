@@ -96,3 +96,15 @@ promise.onSuccess(new Callback<SuccessEvent<ResultType>>() {
     }
 });
 ```
+###AsyncTask usage
+```Java
+//todo
+```
+###Synchronisation example
+```Java
+//todo
+```
+
+License
+-------
+Distributed under the Apache 2.0 License. Copyright (c) 2013 Sergey Yungman (aka komelgman)

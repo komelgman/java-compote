@@ -21,10 +21,6 @@ import kom.promise.events.SuccessEvent;
 import kom.promise.util.AsyncTask;
 import kom.util.callback.Callback;
 
-/**
- * User: syungman
- * Date: 11.02.13
- */
 public class AsyncTaskUsage {
 
     public static void main(String[] args) {

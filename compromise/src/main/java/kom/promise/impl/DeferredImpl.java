@@ -48,33 +48,4 @@ public class DeferredImpl<T> extends PromiseImpl<T> implements Deferred<T> {
     public Promise<T> getPromise() {
         return this;
     }
-
-
-    //
-//    /**
-//     * You can use this method for reset and reuse promise,
-//     * without creating new instance
-//     * <p/>
-//     * Warning: This method not thread safe,
-//     * you must be sure that the Promise instance is no longer used.
-//     *
-//     * @param instance - Promise whose state is reset
-//     */
-//    public static void reset(Promise instance) {
-//        if (!instance.isComplete.compareAndSet(true, false)) {
-//            throw new IllegalStateException("Can't reset not finished task");
-//        }
-//
-//        final TimerTask timerTask = (TimerTask) instance.timerTask.getAndSet(null);
-//        if (timerTask != null) {
-//            timerTask.cancel();
-//        }
-//
-//        instance.reasonOfTaskCompletion = null;
-//        instance.tag = null;
-//
-//        instance.dispatcher.removeEventListeners();
-//        instance.dispatcher.setCallbackExecutor(null);
-//        instance.environment.set(null);
-//    }
 }

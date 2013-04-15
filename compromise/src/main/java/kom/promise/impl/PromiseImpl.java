@@ -20,6 +20,7 @@ import kom.events.DefaultEventDispatcher;
 import kom.events.EventDispatcher;
 import kom.promise.Promise;
 import kom.promise.events.*;
+import kom.promise.exceptions.PromiseException;
 import kom.promise.util.AsyncContext;
 import kom.util.callback.Callback;
 
@@ -186,12 +187,22 @@ public class PromiseImpl<T> implements Promise<T> {
             return ((SuccessEvent<T>) doneEvent).getData();
         }
 
+        final Object data = doneEvent.getData();
+        if (data instanceof InterruptedException)
+            throw (InterruptedException)data;
+
+        if (data instanceof ExecutionException)
+            throw (ExecutionException)data;
+
+        if (data instanceof TimeoutException)
+            throw new ExecutionException((TimeoutException)data);
+
         if (isCancelled()) {
-            throw null;//new PromiseException(CancelEvent.class, doneEvent.getData());
+            throw new ExecutionException(new PromiseException(CancelEvent.class, doneEvent.getData()));
         }
 
         if (isFailed()) {
-            throw null;//new PromiseException(FailEvent.class, doneEvent.getData());
+            throw new ExecutionException(new PromiseException(FailEvent.class, doneEvent.getData()));
         }
 
         throw new IllegalStateException("Result can be retrieved only if promise was completed");
