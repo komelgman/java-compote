@@ -12,8 +12,8 @@ Features
 * ```Deferred```, ```Promise``` and ```AsyncTask``` objects;
 * ```Promise<T> extends Future<T>```;
 * Deferred methods: ```.resolve("ok"), .reject("oops"), .update("please wait: 10% completed")```;
-* Promise termination: ```.abort("Avada Kedavra"), .timeout(msecs)```;
-* Promise callbacks: ```.onSuccess(...), .onFail(...), .onUpdate(...), .onAbort(...), .onAny(...)```;
+* Promise termination: ```.cancel("Avada Kedavra"), .timeout(msecs)```;
+* Promise callbacks: ```.onSuccess(...), .onFail(...), .onUpdate(...), .onCancel(...), .onAny(...)```;
 * Synchronization: ```.await()```;
 * AsyncUtils:
   - ```.wrap(Callable...);``` create promise from callable
@@ -28,7 +28,7 @@ Examples (more can be found in src/usage directory)
 ```Java
 Promise<ResultType> someAsyncMethod() {
     final Deferred<ResultType> deferred = ...
-    final SomeAsyncobject asyncObject = ...;
+    final SomeAsyncObject asyncObject = ...;
 
     deferred.onCancel(new Callback<CancelEvent>() {
         @Override
@@ -43,7 +43,7 @@ Promise<ResultType> someAsyncMethod() {
         public void run() {
             try {
                 // retrieving async code result
-                deferred.resolve(asyncObejct.getResult());
+                deferred.resolve(asyncObject.getResult());
             } catch (Exception e) {
                 // some error caused
                 deferred.reject(e);
