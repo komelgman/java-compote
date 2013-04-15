@@ -17,31 +17,27 @@
 package kom.promise;
 
 import kom.promise.events.*;
-import kom.promise.exceptions.PromiseException;
-import kom.promise.util.AsyncContext;
 import kom.util.callback.Callback;
 
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 @SuppressWarnings("UnusedDeclaration")
-public interface Promise<T> {
-    public boolean abort(Object data);
+public interface Promise<T> extends Future<T> {
+    public boolean cancel(Object data);
+    public boolean cancel();
 
     public Promise<T> onSuccess(Callback<? super SuccessEvent<T>> callback);
     public Promise<T> onFail(Callback<? super FailEvent> callback);
     public Promise<T> onUpdate(Callback<? super UpdateEvent> callback);
-    public Promise<T> onAbort(Callback<? super AbortEvent> callback);
+    public Promise<T> onCancel(Callback<? super CancelEvent> callback);
     public Promise<T> onAny(Callback<? super PromiseEvent> callback);
 
-    public Promise<T> timeout(int msecs);
+    public Promise<T> timeout(long msecs);
     public Promise<T> await();
 
-    public T tryGetResult();
-    public T getResult() throws PromiseException;
-    public Object getRawResult();
+    public T tryGet();
+    public Object rawGet();
 
-    public boolean isCompleted();
-    public boolean isAborted();
     public boolean isSuccessed();
     public boolean isFailed();
 

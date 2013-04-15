@@ -16,7 +16,7 @@
 
 package kom.promise.util;
 
-import kom.promise.events.AbortEvent;
+import kom.promise.events.CancelEvent;
 import kom.promise.events.FailEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.events.UpdateEvent;
@@ -24,10 +24,10 @@ import kom.promise.impl.PromiseImpl;
 import kom.util.callback.Callback;
 
 @SuppressWarnings("UnusedDeclaration")
-public abstract class AsyncTask<T> extends PromiseImpl<T> implements Callback<AbortEvent>, Runnable {
+public abstract class AsyncTask<T> extends PromiseImpl<T> implements Callback<CancelEvent>, Runnable {
 
     public AsyncTask() {
-        onAbort(this);
+        onCancel(this);
     }
 
     public final AsyncTask<T> start() {
@@ -49,7 +49,7 @@ public abstract class AsyncTask<T> extends PromiseImpl<T> implements Callback<Ab
     }
 
     @Override
-    public void handle(AbortEvent message) {
+    public void handle(CancelEvent message) {
         // virtual
     }
 }

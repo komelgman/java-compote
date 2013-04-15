@@ -18,16 +18,14 @@ package kom.promise.util;
 
 import kom.promise.Deferred;
 import kom.promise.Promise;
-import kom.promise.events.PromiseEvent;
-import kom.promise.events.AbortEvent;
+import kom.promise.events.CancelEvent;
 import kom.promise.events.FailEvent;
+import kom.promise.events.PromiseEvent;
 import kom.promise.events.SuccessEvent;
-import kom.promise.exceptions.PromiseException;
 import kom.util.callback.Callback;
 
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,7 +36,7 @@ import static java.util.Arrays.asList;
 // todo: change implementation of body to AsyncTask
 
 @SuppressWarnings({"unchecked", "UnusedDeclaration"})
-public final class AsyncUtil {
+public final class AsyncUtils {
 
     public static <T> Promise<T> wrap(Future<T> future) {
         return wrap(null, future);
@@ -55,7 +53,7 @@ public final class AsyncUtil {
 
     public static <T> Promise<T> wrap(AsyncContext environment, final Callable<T> callable) {
         if (environment == null) {
-            environment = AsyncContext.defaultContext();
+            environment = defaultContext();
         }
 
         final Deferred<T> deferred = environment.deferred();
@@ -88,7 +86,7 @@ public final class AsyncUtil {
 
     public static Promise<List<AsyncTask>> chain(AsyncContext environment, final List<AsyncTask> tasks) {
         if (environment == null) {
-            environment = AsyncContext.defaultContext();
+            environment = defaultContext();
         }
 
         final Deferred<List<AsyncTask>> deferred = environment.deferred();
@@ -99,11 +97,11 @@ public final class AsyncUtil {
 
             @Override
             public void run() {
-                deferred.onAbort(new Callback<AbortEvent>() {
+                deferred.onCancel(new Callback<CancelEvent>() {
                     @Override
-                    public void handle(AbortEvent message) {
+                    public void handle(CancelEvent message) {
                         isCancelled.set(true);
-                        currentTask.get().abort(message);
+                        currentTask.get().cancel(message);
                     }
                 });
 
@@ -143,14 +141,14 @@ public final class AsyncUtil {
 
     public static Promise<List<Promise>> parallel(AsyncContext environment, final List<Promise> promises) {
         if (environment == null) {
-            environment = AsyncContext.defaultContext();
+            environment = defaultContext();
         }
 
         final AtomicInteger count = new AtomicInteger(promises.size());
         final Deferred<List<Promise>> deferred = environment.deferred();
 
         deferred.onFail(new PromiseCanceller(promises, "One of parallel tasks was failed"))
-                .onAbort(new PromiseCanceller(promises, "One of parallel tasks (or main parallel task) was cancelled"));
+                .onCancel(new PromiseCanceller(promises, "One of parallel tasks (or main parallel task) was cancelled"));
 
         for (final Promise promise : promises) {
             promise.onSuccess(new Callback<PromiseEvent>() {
@@ -163,11 +161,11 @@ public final class AsyncUtil {
                     }
                 }
             })
-                    .onAbort(new Callback<AbortEvent>() {
+                    .onCancel(new Callback<CancelEvent>() {
                         @Override
-                        public void handle(AbortEvent message) {
-                            if (!deferred.isCompleted())
-                                deferred.abort(promise);
+                        public void handle(CancelEvent message) {
+                            if (!deferred.isDone())
+                                deferred.cancel(promise);
                         }
                     })
                     .onFail(new Callback<FailEvent>() {
@@ -195,7 +193,7 @@ public final class AsyncUtil {
 
     public static Promise<Promise> earlier(AsyncContext environment, final List<Promise> promises) {
         if (environment == null) {
-            environment = AsyncContext.defaultContext();
+            environment = defaultContext();
         }
 
         final Deferred<Promise> deferred = environment.deferred();
@@ -206,7 +204,7 @@ public final class AsyncUtil {
 
         deferred.onFail(doneCanceller)
                 .onSuccess(doneCanceller)
-                .onAbort(abortCanceller);
+                .onCancel(abortCanceller);
 
         for (final Promise promise : promises) {
             promise.onSuccess(new Callback<SuccessEvent>() {
@@ -221,11 +219,11 @@ public final class AsyncUtil {
                             deferred.reject(promise);
                         }
                     })
-                    .onAbort(new Callback<AbortEvent>() {
+                    .onCancel(new Callback<CancelEvent>() {
                         @Override
-                        public void handle(AbortEvent event) {
-                            if (!deferred.isCompleted())
-                                deferred.abort(promise);
+                        public void handle(CancelEvent event) {
+                            if (!deferred.isDone())
+                                deferred.cancel(promise);
                         }
                     });
         }
@@ -245,11 +243,19 @@ public final class AsyncUtil {
         @Override
         public void handle(Object event) {
             for (Promise promise : promises) {
-                if (!promise.isCompleted()) { // skip already finished,
+                if (!promise.isDone()) { // skip already finished,
                     // but it still not thread safe and can try stopping finished task
-                    promise.abort(new IllegalStateException(message));
+                    promise.cancel(new IllegalStateException(message));
                 }
             }
         }
+    }
+
+    public static AsyncContext defaultContext() {
+        return AsyncContextHolder.HOLDER_INSTANCE;
+    }
+
+    private static class AsyncContextHolder {
+        public static final AsyncContext HOLDER_INSTANCE = new AsyncContext(null, null);
     }
 }

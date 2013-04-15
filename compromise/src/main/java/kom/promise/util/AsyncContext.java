@@ -48,10 +48,6 @@ public class AsyncContext {
         this.callbackExecutor = callbackExecutor;
     }
 
-    public static AsyncContext defaultContext() {
-        return SingletonHolder.HOLDER_INSTANCE;
-    }
-
     public <T> void executeCallback(Callback<T> callback, T data) {
         if (callbackExecutor == null) {
             callback.handle(data);
@@ -88,9 +84,5 @@ public class AsyncContext {
 
     public Executor getRunnableExecutor() {
         return runnableExecutor;
-    }
-
-    private static class SingletonHolder {
-        public static final AsyncContext HOLDER_INSTANCE = new AsyncContext(null, null);
     }
 }

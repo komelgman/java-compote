@@ -10,12 +10,12 @@ This module depends on Compliment module and shared-classes
 Features
 --------
 * ```Deferred```, ```Promise``` and ```AsyncTask``` objects;
-* Deferred: ```.resolve("ok"), .reject("oops"), .update("please wait: 10% completed")```;
+* ```Promise<T> extends Future<T>```;
+* Deferred methods: ```.resolve("ok"), .reject("oops"), .update("please wait: 10% completed")```;
 * Promise termination: ```.abort("Avada Kedavra"), .timeout(msecs)```;
 * Promise callbacks: ```.onSuccess(...), .onFail(...), .onUpdate(...), .onAbort(...), .onAny(...)```;
 * Synchronization: ```.await()```;
 * AsyncUtils:
-  - ```.wrap(Future...);``` create promise from java future
   - ```.wrap(Callable...);``` create promise from callable
   - ```.chain(asyncTask1, asyncTask2, ...);``` asyncTasks sequential execution
   - ```.parallel(p1, p2, ...);``` wait for all promises will successfully fulfilled (reject on first failed/aborted)
@@ -30,21 +30,26 @@ Promise<ResultType> someAsyncMethod() {
     final Deferred<ResultType> deferred = ...
     final SomeAsyncobject asyncObject = ...;
 
-    deferred.onAbort(new Callback<AbortEvent>() {
+    deferred.onCancel(new Callback<CancelEvent>() {
         @Override
-        public void handle(AbortEvent message) {
+        public void handle(CancelEvent message) {
             // stopping async code
             asyncObject.cancel();
         }
     });
 
-    try {
-        // retrieving async code result
-        deferred.resolve(asyncObejct.getResult());
-    } catch (Exception e) {
-        // some error caused
-        deferred.reject(e);
-    }
+    defaultContext().executeRunnable(new Runnable() {
+        @Override
+        public void run() {
+            try {
+                // retrieving async code result
+                deferred.resolve(asyncObejct.getResult());
+            } catch (Exception e) {
+                // some error caused
+                deferred.reject(e);
+            }
+        }
+    });
 
     return deferred.getPromise();
 }
@@ -53,7 +58,7 @@ Promise<ResultType> someAsyncMethod() {
 Creations:
 ```Java
 // from default async context
-Deferred<ResultType> deferred = AsyncContext.defaultContext().deferred();
+Deferred<ResultType> deferred = AsyncUtils.defaultContext().deferred();
 ...
 return deferred.getPromise();
 ```

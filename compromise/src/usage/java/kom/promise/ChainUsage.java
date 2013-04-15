@@ -16,7 +16,7 @@
 
 package kom.promise;
 
-import kom.promise.events.AbortEvent;
+import kom.promise.events.CancelEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.events.UpdateEvent;
 import kom.promise.util.AsyncTask;
@@ -24,7 +24,7 @@ import kom.util.callback.Callback;
 
 import java.util.List;
 
-import static kom.promise.util.AsyncUtil.chain;
+import static kom.promise.util.AsyncUtils.chain;
 
 public class ChainUsage {
 
@@ -43,7 +43,7 @@ public class ChainUsage {
                 Object data = message.getData();
                 if (data instanceof Promise) {
                     System.out.println(((Promise) data).getTag()
-                            + " -> " + ((Promise) data).tryGetResult());
+                            + " -> " + ((Promise) data).tryGet());
                 }
             }
         }).onSuccess(new Callback<SuccessEvent<List<AsyncTask>>>() {
@@ -84,7 +84,7 @@ public class ChainUsage {
             }
 
             @Override
-            public void handle(AbortEvent message) {
+            public void handle(CancelEvent message) {
                 isCancelled = true;
             }
         };

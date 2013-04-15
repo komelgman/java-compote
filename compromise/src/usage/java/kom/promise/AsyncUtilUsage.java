@@ -16,15 +16,15 @@
 
 package kom.promise;
 
-import kom.promise.events.AbortEvent;
+import kom.promise.events.CancelEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.util.AsyncTask;
 import kom.util.callback.Callback;
 
 import java.util.List;
 
-import static kom.promise.util.AsyncUtil.earlier;
-import static kom.promise.util.AsyncUtil.parallel;
+import static kom.promise.util.AsyncUtils.earlier;
+import static kom.promise.util.AsyncUtils.parallel;
 
 public class AsyncUtilUsage {
 
@@ -48,7 +48,7 @@ public class AsyncUtilUsage {
             @Override
             public void handle(SuccessEvent<List<Promise>> message) {
                 for (Promise promise : message.getData()) {
-                    System.out.println(promise.getTag() + " -> " + promise.tryGetResult());
+                    System.out.println(promise.getTag() + " -> " + promise.tryGet());
                 }
             }
         });
@@ -65,7 +65,7 @@ public class AsyncUtilUsage {
             @Override
             public void handle(SuccessEvent<Promise> message) {
                 Promise promise = message.getData();
-                System.out.println(promise.getTag() + " -> " + promise.tryGetResult());
+                System.out.println(promise.getTag() + " -> " + promise.tryGet());
             }
         });
     }
@@ -81,14 +81,14 @@ public class AsyncUtilUsage {
             @Override
             public void handle(SuccessEvent<Promise> message) {
                 Promise promise = message.getData();
-                System.out.println(promise.getTag() + " -> " + promise.tryGetResult());
+                System.out.println(promise.getTag() + " -> " + promise.tryGet());
             }
-        }).onAbort(new Callback<AbortEvent>() {
+        }).onCancel(new Callback<CancelEvent>() {
             @Override
-            public void handle(AbortEvent message) {
+            public void handle(CancelEvent message) {
                 Object data = message.getData();
                 if (data instanceof Promise) {
-                    System.out.println(((Promise) data).getTag() + " -> " + ((Promise) data).getRawResult());
+                    System.out.println(((Promise) data).getTag() + " -> " + ((Promise) data).rawGet());
                 } else if (data instanceof Throwable) {
                     System.out.println(((Throwable) data).getMessage());
                 }
@@ -102,10 +102,10 @@ public class AsyncUtilUsage {
             {
                 // setContext(?); // can set some environment here
 
-                onAbort(new Callback<AbortEvent>() {
+                onCancel(new Callback<CancelEvent>() {
                     @Override
-                    public void handle(AbortEvent message) {
-                        System.out.println(getTag() + " -> " + getRawResult());
+                    public void handle(CancelEvent message) {
+                        System.out.println(getTag() + " -> " + rawGet());
                     }
                 });
             }
@@ -133,7 +133,7 @@ public class AsyncUtilUsage {
             }
 
             @Override
-            public void handle(AbortEvent message) {
+            public void handle(CancelEvent message) {
                 isCancelled = true;
             }
         }.start();

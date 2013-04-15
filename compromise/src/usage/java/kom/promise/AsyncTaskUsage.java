@@ -16,7 +16,7 @@
 
 package kom.promise;
 
-import kom.promise.events.AbortEvent;
+import kom.promise.events.CancelEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.util.AsyncTask;
 import kom.util.callback.Callback;
@@ -76,7 +76,7 @@ public class AsyncTaskUsage {
             }
 
             @Override
-            public void handle(AbortEvent message) {
+            public void handle(CancelEvent message) {
                 isCancelled = true;
             }
         }.start();

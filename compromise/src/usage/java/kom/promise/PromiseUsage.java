@@ -16,11 +16,13 @@
 
 package kom.promise;
 
-import kom.promise.events.AbortEvent;
+import kom.promise.events.CancelEvent;
 import kom.promise.events.SuccessEvent;
 import kom.promise.events.UpdateEvent;
 import kom.promise.util.AsyncContext;
 import kom.util.callback.Callback;
+
+import static kom.promise.util.AsyncUtils.defaultContext;
 
 public class PromiseUsage {
 
@@ -53,10 +55,10 @@ public class PromiseUsage {
             public void handle(SuccessEvent<String> message) {
                 System.out.println("Example 2 success: " + message.getData());
             }
-        }).onAbort(new Callback<AbortEvent>() {
+        }).onCancel(new Callback<CancelEvent>() {
             @Override
-            public void handle(AbortEvent message) {
-                System.out.println("Example 2 onAbort: " + message.getData().toString());
+            public void handle(CancelEvent message) {
+                System.out.println("Example 2 onCancel: " + message.getData().toString());
             }
         }).timeout(2000);
     }
@@ -64,7 +66,7 @@ public class PromiseUsage {
     private void example3() {
         System.out.println("Example 3: blocking semantic, please wait 10 sec");
 
-        String result = someLongMethod(10000).await().tryGetResult();
+        String result = someLongMethod(10000).await().tryGet();
         System.out.println("Example 3 result: " + result);
     }
 
@@ -76,14 +78,14 @@ public class PromiseUsage {
                 public void handle(UpdateEvent message) {
                     System.out.println("Example 4 progress: " + message.getData());
                 }
-        }).await().tryGetResult();
+        }).await().tryGet();
 
         System.out.println("Example 4 result: " + result);
     }
 
 
     private Promise<String> someLongMethod(final int delay) {
-        final Deferred<String> deferred = AsyncContext.defaultContext().deferred();
+        final Deferred<String> deferred = defaultContext().deferred();
 
         new Thread() {
             private boolean isCancelled = false;
@@ -91,9 +93,9 @@ public class PromiseUsage {
             @Override
             public void run() {
                 // job stopper
-                deferred.getPromise().onAbort(new Callback<AbortEvent>() {
+                deferred.getPromise().onCancel(new Callback<CancelEvent>() {
                     @Override
-                    public void handle(AbortEvent message) {
+                    public void handle(CancelEvent message) {
                         isCancelled = true;
                     }
                 });
