@@ -24,7 +24,7 @@ import kom.util.callback.CallbackExecutor;
 import kom.util.callback.RunnableCallbackExecutor;
 
 import java.util.Timer;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @SuppressWarnings("UnusedDeclaration")
@@ -32,9 +32,9 @@ public class AsyncContext {
     private static final Timer scheduler = new Timer(true);
 
     private final CallbackExecutor callbackExecutor;
-    private final Executor runnableExecutor;
+    private final ExecutorService runnableExecutor;
 
-    public AsyncContext(Executor runnableExecutor, CallbackExecutor callbackExecutor) {
+    public AsyncContext(ExecutorService runnableExecutor, CallbackExecutor callbackExecutor) {
         if (runnableExecutor == null) {
             runnableExecutor = Executors.newCachedThreadPool();
         }
@@ -82,7 +82,7 @@ public class AsyncContext {
         return callbackExecutor;
     }
 
-    public Executor getRunnableExecutor() {
+    public ExecutorService getRunnableExecutor() {
         return runnableExecutor;
     }
 }
