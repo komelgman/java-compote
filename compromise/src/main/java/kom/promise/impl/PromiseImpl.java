@@ -20,15 +20,14 @@ import kom.events.DefaultEventDispatcher;
 import kom.events.EventDispatcher;
 import kom.promise.Promise;
 import kom.promise.events.*;
-import kom.promise.exceptions.PromiseException;
 import kom.promise.util.AsyncContext;
 import kom.util.callback.Callback;
 
 import java.util.TimerTask;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -37,7 +36,6 @@ import java.util.logging.Logger;
 
 import static kom.promise.util.AsyncUtils.defaultContext;
 
-@SuppressWarnings("unchecked")
 public class PromiseImpl<T> implements Promise<T> {
     private static final Logger log = Logger.getLogger(Promise.class.getName());
 
@@ -48,8 +46,7 @@ public class PromiseImpl<T> implements Promise<T> {
     private final AtomicReference<TimerTask> timerTask = new AtomicReference<TimerTask>(null);
     private final AtomicReference<AsyncContext> context = new AtomicReference<AsyncContext>(null);
 
-    private AtomicBoolean isDone = new AtomicBoolean(false);
-    private volatile PromiseEvent<Object> doneEvent = null;
+    private volatile AtomicReference<PromiseEvent<?>> doneEvent = new AtomicReference<PromiseEvent<?>>(null);
     private volatile Object tag = null;
 
     public PromiseImpl() {
@@ -73,27 +70,28 @@ public class PromiseImpl<T> implements Promise<T> {
 
 
     @Override
-    public Promise<T> onSuccess(Callback<? super SuccessEvent<T>> callback) {
-        return attachCallback(SuccessEvent.class, (Callback<? super SuccessEvent>) callback);
+    public Promise<T> onSuccess(Callback<SuccessEvent<T>> callback) {
+        //noinspection unchecked
+        return attachCallback(SuccessEvent.class, (Callback)callback);
     }
 
     @Override
-    public Promise<T> onFail(Callback<? super FailEvent> callback) {
+    public Promise<T> onFail(Callback<FailEvent> callback) {
         return attachCallback(FailEvent.class, callback);
     }
 
     @Override
-    public Promise<T> onUpdate(Callback<? super UpdateEvent> callback) {
+    public Promise<T> onUpdate(Callback<UpdateEvent> callback) {
         return attachCallback(UpdateEvent.class, callback);
     }
 
     @Override
-    public Promise<T> onCancel(Callback<? super CancelEvent> callback) {
+    public Promise<T> onCancel(Callback<CancelEvent> callback) {
         return attachCallback(CancelEvent.class, callback);
     }
 
     @Override
-    public Promise<T> onAny(Callback<? super PromiseEvent> callback) {
+    public Promise<T> onAny(Callback<PromiseEvent> callback) {
         return attachCallback(PromiseEvent.class, callback);
     }
 
@@ -145,7 +143,7 @@ public class PromiseImpl<T> implements Promise<T> {
 
     @Override
     public Promise<T> await() {
-        if (!isDone.get()) {
+        if (!isDone()) {
             waitForTaskToBeCompleted();
         }
 
@@ -155,7 +153,7 @@ public class PromiseImpl<T> implements Promise<T> {
     private void waitForTaskToBeCompleted() {
         lock.lock();
         try {
-            while (!isDone.get()) {
+            while (!isDone()) {
                 awaiter.awaitUninterruptibly();
             }
         } finally {
@@ -165,8 +163,11 @@ public class PromiseImpl<T> implements Promise<T> {
 
     @Override
     public T tryGet() {
+        await();
+
         if (isSuccessed()) {
-            return ((SuccessEvent<T>) doneEvent).getData();
+            //noinspection unchecked
+            return ((SuccessEvent<T>) doneEvent.get()).getData();
         }
 
         return null;
@@ -174,20 +175,21 @@ public class PromiseImpl<T> implements Promise<T> {
 
     @Override
     public Object rawGet() {
-        if (isDone()) {
-            return doneEvent.getData();
-        }
+        await();
 
-        throw new IllegalStateException("Result can be retrieved only if promise was completed");
+        return doneEvent.get().getData();
     }
 
     @Override
     public T get() throws ExecutionException, InterruptedException {
+        await();
+
         if (isSuccessed()) {
-            return ((SuccessEvent<T>) doneEvent).getData();
+            //noinspection unchecked
+            return ((SuccessEvent<T>) doneEvent.get()).getData();
         }
 
-        final Object data = doneEvent.getData();
+        final Object data = doneEvent.get().getData();
         if (data instanceof InterruptedException)
             throw (InterruptedException)data;
 
@@ -198,18 +200,23 @@ public class PromiseImpl<T> implements Promise<T> {
             throw new ExecutionException((TimeoutException)data);
 
         if (isCancelled()) {
-            throw new ExecutionException(new PromiseException(CancelEvent.class, doneEvent.getData()));
+            throw new CancellationException("Promise was cancelled. Use rawGet for retrieve reason");
         }
 
         if (isFailed()) {
-            throw new ExecutionException(new PromiseException(FailEvent.class, doneEvent.getData()));
+            throw new ExecutionException("Promise was failed. Use rawGet for retrieve reason", null);
         }
 
         throw new IllegalStateException("Result can be retrieved only if promise was completed");
     }
 
+
     @Override
     public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        if (unit == null) {
+            throw new NullPointerException("Unit can't be null");
+        }
+
         try {
             return timeout(unit.convert(timeout, TimeUnit.MILLISECONDS)).get();
         } catch (ExecutionException e) {
@@ -222,12 +229,12 @@ public class PromiseImpl<T> implements Promise<T> {
     }
 
     protected <A extends PromiseEvent<Object>> boolean triggerEvent(Class<A> reasonType, Object data) {
-        if (isDone.get()) {
+        if (isDone()) {
             warningAboutCompletedTask(reasonType);
             return false;
         }
 
-        final PromiseEvent reason = context().event(reasonType);
+        final A reason = context().event(reasonType);
         reason.setData(data);
 
         dispatcher.dispatchEvent(reason);
@@ -236,16 +243,15 @@ public class PromiseImpl<T> implements Promise<T> {
     }
 
     protected <A extends PromiseEvent<Object>> boolean triggerEventAndStopProcessing(Class<A> reasonType, Object data) {
-        if (!isDone.compareAndSet(false, true)) {
+        final PromiseEvent<Object> event = context().event(reasonType);
+
+        if (!doneEvent.compareAndSet(null, event)) {
             warningAboutCompletedTask(reasonType);
             return false;
         }
 
-        doneEvent = context().event(reasonType);
-        doneEvent.setData(data);
-
-        dispatcher.dispatchEvent(doneEvent);
-
+        event.setData(data);
+        dispatcher.dispatchEvent(event);
         notifyAboutTaskCompleted();
 
         return true;
@@ -254,7 +260,7 @@ public class PromiseImpl<T> implements Promise<T> {
     private <A extends PromiseEvent<Object>> void warningAboutCompletedTask(Class<A> reasonType) {
         log.log(Level.WARNING, "Promise was notified with reason " + reasonType.getSimpleName() + "\n"
                 + "But this promise has already been stopped by reason "
-                + this.doneEvent.getClass().getSimpleName());
+                + this.doneEvent.get().getClass().getSimpleName());
     }
 
     private void notifyAboutTaskCompleted() {
@@ -268,10 +274,11 @@ public class PromiseImpl<T> implements Promise<T> {
 
     private <A extends PromiseEvent> Promise<T> attachCallback(Class<A> observedEvent, Callback<? super A> callback) {
         if (callback == null) {
-            throw new NullPointerException("Callback can't be NULL");
+            throw new NullPointerException("Callback can't be null");
         }
 
-        if (isDone.get()) {
+        if (isDone()) {
+            //noinspection unchecked
             executeCallback(observedEvent, (Callback<PromiseEvent>) callback);
         } else {
             dispatcher.addEventListener(observedEvent, callback);
@@ -281,8 +288,8 @@ public class PromiseImpl<T> implements Promise<T> {
     }
 
     private <A extends PromiseEvent> void executeCallback(Class<A> observedEvent, Callback<PromiseEvent> callback) {
-        if ((observedEvent == PromiseEvent.class) || (doneEvent.getClass() == observedEvent)) {
-            context().executeCallback(callback, doneEvent);
+        if ((observedEvent == PromiseEvent.class) || (doneEvent.get().getClass() == observedEvent)) {
+            context().executeCallback(callback, doneEvent.get());
         }
     }
 
@@ -292,22 +299,22 @@ public class PromiseImpl<T> implements Promise<T> {
 
     @Override
     public boolean isDone() {
-        return isDone.get();
+        return doneEvent.get() != null;
     }
 
     @Override
     public boolean isCancelled() {
-        return isDone.get() && doneEvent.getClass() == CancelEvent.class;
+        return isDone() && doneEvent.get().getClass() == CancelEvent.class;
     }
 
     @Override
     public boolean isSuccessed() {
-        return isDone.get() && doneEvent.getClass() == SuccessEvent.class;
+        return isDone() && doneEvent.get().getClass() == SuccessEvent.class;
     }
 
     @Override
     public boolean isFailed() {
-        return isDone.get() && doneEvent.getClass() == FailEvent.class;
+        return isDone() && doneEvent.get().getClass() == FailEvent.class;
     }
 
     @Override
