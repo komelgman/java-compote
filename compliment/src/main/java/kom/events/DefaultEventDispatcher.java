@@ -24,7 +24,7 @@ import kom.util.collections.ConcurrentMultiMap;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings("unchecked")
+
 public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<T> {
     private static final Map<Class<? extends Event>, List<Class<? extends Event>>> eventsCache
             = new ConcurrentHashMap<Class<? extends Event>, List<Class<? extends Event>>>();
@@ -36,11 +36,13 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
 
     @Override
     public <Y extends T> void addEventListener(Class<Y> eventType, Callback<? super Y> listener) {
+        //noinspection unchecked
         listenersMap.add(eventType, (Callback<Event>) listener);
     }
 
     @Override
     public <Y extends T> void removeEventListener(Class<Y> eventType, Callback<? super Y> listener) {
+        //noinspection unchecked
         listenersMap.remove(eventType, (Callback<Event>)listener);
     }
 
@@ -75,7 +77,6 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
         }
     }
 
-    @SuppressWarnings("SuspiciousMethodCalls")
     private List<Class<? extends Event>> getEvents(Class<? extends Event> fromEventType) {
         final ArrayList<Class<? extends Event>> result = new ArrayList<Class<? extends Event>>();
         final LinkedList<Class<?>> events = new LinkedList<Class<?>>();
@@ -85,10 +86,12 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
             final Class<?> eventType = events.removeLast();
 
             if (eventType != null && Event.class.isAssignableFrom(eventType)) {
+                //noinspection SuspiciousMethodCalls
                 if (result.contains(eventType)) {
                     continue;
                 }
 
+                //noinspection unchecked
                 result.add((Class<Event>) eventType);
                 events.addFirst(eventType.getSuperclass());
 
