@@ -39,7 +39,7 @@ import static kom.promise.util.AsyncUtils.defaultContext;
 public class PromiseImpl<T> implements Promise<T> {
     private static final Logger log = Logger.getLogger(Promise.class.getName());
 
-    private final EventDispatcher<PromiseEvent> dispatcher = new DefaultEventDispatcher<PromiseEvent>();
+    private final EventDispatcher<PromiseEvent> dispatcher = new DefaultEventDispatcher<PromiseEvent>(PromiseEvent.class);
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition awaiter = lock.newCondition();
 

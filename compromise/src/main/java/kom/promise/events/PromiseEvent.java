@@ -16,9 +16,7 @@
 
 package kom.promise.events;
 
-import kom.events.Event;
-
-public class PromiseEvent<T> implements Event {
+public class PromiseEvent<T> {
     private T data;
 
     public void setData(T data) {

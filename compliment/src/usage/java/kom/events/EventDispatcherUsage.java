@@ -95,7 +95,7 @@ public class EventDispatcherUsage {
 
 
     private void init() {
-        dispatcher = new DefaultEventDispatcher<UBaseEvent>();
+        dispatcher = new DefaultEventDispatcher<UBaseEvent>(UBaseEvent.class);
     }
 
     private class U1Event extends UBaseEvent {
@@ -127,7 +127,7 @@ public class EventDispatcherUsage {
     }
 
 
-    private class UBaseEvent implements Event {
+    private class UBaseEvent {
 
     }
 }

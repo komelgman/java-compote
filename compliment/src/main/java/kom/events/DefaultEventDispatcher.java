@@ -21,34 +21,50 @@ import kom.util.callback.CallbackExecutor;
 import kom.util.callback.RunnableCallbackExecutor;
 import kom.util.collections.ConcurrentMultiMap;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<T> {
-    private static final Map<Class<? extends Event>, List<Class<? extends Event>>> eventsCache
-            = new ConcurrentHashMap<Class<? extends Event>, List<Class<? extends Event>>>();
+public class DefaultEventDispatcher<T> implements EventDispatcher<T> {
+    private static final Map<Class, List<Class>> eventsCache = new ConcurrentHashMap<Class, List<Class>>();
 
-    private final ConcurrentMultiMap<Class<? extends Event>, Callback<Event>>
-            listenersMap = new ConcurrentMultiMap<Class<? extends Event>, Callback<Event>>();
+    private final ConcurrentMultiMap<Class, Callback<T>> listenersMap = new ConcurrentMultiMap<Class, Callback<T>>();
 
+    private final Class<T> genericType;
     private CallbackExecutor executor;
+
+    public DefaultEventDispatcher(Class<T> genericType) {
+        this.genericType = genericType;
+    }
+
+    @Override
+    public void addEventListener(Callback<T> listener) {
+        addEventListener(genericType, listener);
+    }
 
     @Override
     public <Y extends T> void addEventListener(Class<Y> eventType, Callback<? super Y> listener) {
         //noinspection unchecked
-        listenersMap.add(eventType, (Callback<Event>) listener);
+        listenersMap.add(eventType, (Callback<T>) listener);
     }
 
     @Override
     public <Y extends T> void removeEventListener(Class<Y> eventType, Callback<? super Y> listener) {
         //noinspection unchecked
-        listenersMap.remove(eventType, (Callback<Event>)listener);
+        listenersMap.remove(eventType, (Callback<T>)listener);
     }
 
     @Override
     public void removeEventListeners(Class<? extends T> eventType) {
         listenersMap.remove(eventType);
+    }
+
+    @Override
+    public void removeEventListener(Callback<T> listener) {
+        removeEventListener(genericType, listener);
     }
 
     @Override
@@ -58,8 +74,8 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
 
     @Override
     public void dispatchEvent(T event) {
-        final Class<? extends Event> rootEventType = event.getClass();
-        List<Class<? extends Event>> eventTypesList = eventsCache.get(rootEventType);
+        final Class rootEventType = event.getClass();
+        List<Class> eventTypesList = eventsCache.get(rootEventType);
 
         if (eventTypesList == null) {
             synchronized (eventsCache) {
@@ -72,30 +88,28 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
             }
         }
 
-        for (Class<? extends Event> eventType : eventTypesList) {
+        for (Class eventType : eventTypesList) {
             dispatchEvent(eventType, event);
         }
     }
 
-    private List<Class<? extends Event>> getEvents(Class<? extends Event> fromEventType) {
-        final ArrayList<Class<? extends Event>> result = new ArrayList<Class<? extends Event>>();
-        final LinkedList<Class<?>> events = new LinkedList<Class<?>>();
+    private List<Class> getEvents(Class fromEventType) {
+        final ArrayList<Class> result = new ArrayList<Class>();
+        final LinkedList<Class> events = new LinkedList<Class>();
         events.addFirst(fromEventType);
 
         while (!events.isEmpty()) {
-            final Class<?> eventType = events.removeLast();
+            final Class eventType = events.removeLast();
 
-            if (eventType != null && Event.class.isAssignableFrom(eventType)) {
-                //noinspection SuspiciousMethodCalls
+            if (eventType != null && (genericType.isAssignableFrom(eventType)) ) {
                 if (result.contains(eventType)) {
                     continue;
                 }
 
-                //noinspection unchecked
-                result.add((Class<Event>) eventType);
+                result.add(eventType);
                 events.addFirst(eventType.getSuperclass());
 
-                for (Class<?> item : eventType.getInterfaces()) {
+                for (Class item : eventType.getInterfaces()) {
                     events.addFirst(item);
                 }
             }
@@ -104,14 +118,14 @@ public class DefaultEventDispatcher<T extends Event> implements EventDispatcher<
         return result;
     }
 
-    protected void dispatchEvent(Class<? extends Event> eventType, final T event) {
+    protected void dispatchEvent(Class eventType, final T event) {
         if (executor == null) {
             executor = RunnableCallbackExecutor.getInstance();
         }
 
-        listenersMap.foreach(eventType, new Callback<Callback<Event>>() {
+        listenersMap.foreach(eventType, new Callback<Callback<T>>() {
             @Override
-            public void handle(Callback<Event> listener) {
+            public void handle(Callback<T> listener) {
                 executor.execute(listener, event);
             }
         });

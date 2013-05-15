@@ -20,13 +20,13 @@ package kom.events;
 import kom.util.callback.Callback;
 import kom.util.callback.CallbackExecutor;
 
-public interface EventDispatcher<T extends Event> {
+public interface EventDispatcher<T> {
+    public  void addEventListener(Callback<T> listener);
     public <Y extends T> void addEventListener(Class<Y> eventType, Callback<? super Y> listener);
 
     public void removeEventListeners();
-
     public void removeEventListeners(Class<? extends T> eventType);
-
+    public void removeEventListener(Callback<T> listener);
     public <Y extends T> void removeEventListener(Class<Y> eventType, Callback<? super Y> listener);
 
     public void dispatchEvent(T event);
